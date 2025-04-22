@@ -14,7 +14,7 @@ _The AC Dimmer Library is an efficient solution for controlling the brightness o
 _​_  
 [📄 AC Dimmers Catalog](https://www.rbdimmer.com/shop)
 
-[📄 AHow dimmer work](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5)
+[📄 How dimmer work: Operating Principles and Applications](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5)
 
 
 ## 🔗 Fraimworks: Guides and Examples
