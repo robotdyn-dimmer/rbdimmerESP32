@@ -8,7 +8,16 @@ Universal AC Dimmer Library for ESP32 (Arduino and ESP-IDF)
 _The AC Dimmer Library is an efficient solution for controlling the brightness of alternating current (AC) devices using an ESP32 family microcontroller. The library leverages ESP32 hardware capabilities, such as GPIO interrupt processing and high-precision timers, to precisely control the TRIAC activation moment in each half-cycle of alternating current._
 
    
+## 🔗 Fraimworks: Guides and Examples
 
+---
+
+_​_  
+1. [📄 Arduino Giude & Examples](https://www.rbdimmer.com/knowledge/article/59) 
+2. [📄 ESP-IDF Guide & Examples](/knowledge/article/61)
+3. [📄 ESPHome Guide & Examples](/knowledge/article/62)
+
+   
 ## ⭐ Features and Benefits
 
 ---
@@ -59,21 +68,7 @@ _The AC Dimmer Library is an efficient solution for controlling the brightness o
 
 ##   
 
-## 🔗 Fraimworks: Guides and Examples
 
----
-
-_​_  
-
-Show AllRefresh
-
-1. [📄 Arduino Giude & Examples](/knowledge/article/60)
-2. [📄 ESP-IDF Guide & Examples](/knowledge/article/61)
-3. [📄 ESPHome Guide & Examples](/knowledge/article/62)
-
-  
-
-  
 
 ## 📝 Functional Specifications
 
