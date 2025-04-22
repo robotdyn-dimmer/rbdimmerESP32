@@ -11,29 +11,29 @@ _The AC Dimmer Library is an efficient solution for controlling the brightness o
 
 ---
 
-_​_  
 [📄 AC Dimmers Catalog](https://www.rbdimmer.com/shop)
 
 [📄 How dimmer work: Operating Principles and Applications](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5)
-
+_​_  
 
 ## 🔗 Fraimworks: Guides and Examples
 
 ---
 
-_​_  
 1. [📄 AC Dimmers Guide](https://www.rbdimmer.com/knowledge/article/45)
 2. [📄 AC Dimmers Hardware Connection](https://www.rbdimmer.com/knowledge/article/49) 
-   
+_​_     
+
 ## 🔗 Fraimworks: Guides and Examples
 
 ---
-_​_  
+
 1. [📄 Library overview](https://www.rbdimmer.com/knowledge/article/59) 
 2. [📄 Arduino Giude & Examples](https://www.rbdimmer.com/knowledge/article/60) 
 3. [📄 ESP-IDF Guide & Examples](https://www.rbdimmer.com/knowledge/article/61)
 4. [📄 ESPHome Guide & Examples](https://www.rbdimmer.com/knowledge/article/62)
 
+_​_  
    
 ## ⭐ Features and Benefits
 
