@@ -133,7 +133,9 @@ ESP32 3.3V   ←→  Dimmer Module VCC (if required)
 | [Installation Guide](docs/INSTALLATION.md) | Step-by-step setup for all platforms |
 | [Hardware Guide](docs/HARDWARE.md) | Wiring diagrams and safety information |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Common problems and solutions |
+| [AI promts guide](docs/AI-PROMT-GUIDE.md) | AI Code Generation Guide for dimmer projects |
 | [Examples Overview](examples/README.md) | Detailed explanation of all examples |
+
 
 ### Platform-Specific Guides
 - **Arduino Guide**: [Arduino Framework Setup and Examples](https://www.rbdimmer.com/knowledge/article/60)
