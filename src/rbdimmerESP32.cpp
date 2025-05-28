@@ -1,6 +1,24 @@
 /**
  * @file rbdimmerESP32.cpp
  * @brief Implementation of the ESP32 AC Dimmer Library using esp_timer and hardware interrupts
+ * 
+ * This file contains the implementation of all public and internal functions
+ * for controlling AC dimmers using ESP32 hardware capabilities.
+ * 
+ * @author dev@rbdimmer.com
+ * @version 1.0.0
+ * @date 2024
+ * 
+ * @see Dimmers website: https://rbdimmer.com
+ * @see Library repository: https://github.com/robotdyn-dimmer/rbdimmerESP32
+ * @see Dimmers catalog: https://www.rbdimmer.com/dimmers-pricing
+ * @see Dimmers documentation: https://www.rbdimmer.com/knowledge/article/45
+ * @see Library documentation: https://www.rbdimmer.com/knowledge/article/59
+ * @see Dimmers projects: https://www.rbdimmer.com/blog/dimmers-projects-5
+ * @see Support and community: https://www.rbdimmer.com/forum
+ * 
+ * @copyright Copyright (c) 2024 RBDimmer
+ * @license MIT License
  */
 
  #include "rbdimmerESP32.h"
@@ -15,7 +33,12 @@
  
  #define TAG "RBDIMMER"
  
- // Structures
+/**
+ * @brief Zero-crossing detector structure
+ * @internal
+ * Stores all information related to a zero-crossing detector
+ * for a specific phase in the AC mains.
+ */
  typedef struct {
      uint8_t pin;                      // Zero-cross detector pin
      uint8_t phase;                    // Phase number
@@ -26,12 +49,18 @@
      void* user_data;                  // User data for callbacks
      bool is_active;                   // Active state flag
      
-     // Оптимизация измерения частоты
-     bool frequency_measured;          // Флаг, указывающий что частота определена
-     uint8_t measurement_count;        // Счетчик измерений
-     uint32_t total_period_us;         // Суммарный период для усреднения
+     // Frequency measurement optimization
+     bool frequency_measured;          //**< Flag indicating frequency is determined
+     uint8_t measurement_count;        //**< Number of measurements taken
+     uint32_t total_period_us;         //**< Total period for averaging
  } rbdimmer_zero_cross_t;
  
+ /**
+ * @brief Dimmer channel structure implementation
+ * @internal
+ * Complete implementation of the opaque rbdimmer_channel_t type.
+ * Contains all state and configuration for a single dimmer channel.
+ */
  struct rbdimmer_channel_s {
      uint8_t gpio_pin;                 // Output pin
      uint8_t phase;                    // Reference to phase
@@ -48,35 +77,111 @@
  
  // Managers
  static struct {
-     rbdimmer_zero_cross_t zero_cross[RBDIMMER_MAX_PHASES];
-     uint8_t count;
-     bool isr_installed;
+     rbdimmer_zero_cross_t zero_cross[RBDIMMER_MAX_PHASES]; //**< Array of detectors
+     uint8_t count;                                         //**< Number of active detectors
+     bool isr_installed;                                    //**< Flag indicating ISR service is installed  
  } zero_cross_manager = {
      .count = 0,
      .isr_installed = false
  };
  
+ /**
+ * @brief Dimmer channel manager
+ * @internal
+  * Manages all created dimmer channels in the system.
+ */
  static struct {
-     rbdimmer_channel_t* channels[RBDIMMER_MAX_CHANNELS];
-     uint8_t count;
+     rbdimmer_channel_t* channels[RBDIMMER_MAX_CHANNELS];   //**< Array of channel pointers
+     uint8_t count;                                         //**< Number of active channels  
  } dimmer_manager = {
      .count = 0
  };
  
  // Tables for level to delay conversion
- static uint8_t level_to_delay_table_linear[101];
- static uint8_t level_to_delay_table_rms[101];
- static uint8_t level_to_delay_table_log[101];
+ static uint8_t level_to_delay_table_linear[101];           //Linear brightness to delay conversion table
+ static uint8_t level_to_delay_table_rms[101];              //RMS brightness to delay conversion table
+ static uint8_t level_to_delay_table_log[101];              //Logarithmic brightness to delay conversion table
  
  // Forward declarations for internal functions
+ /**
+ * @brief Initialize lookup tables for brightness curves
+ * @internal
+  * Pre-calculates conversion tables for different curve types to
+ * optimize runtime performance.
+ */
  static void init_level_tables(void);
+
+ /**
+ * @brief Find zero-cross detector by phase number
+ * @internal
+  * @param[in] phase Phase number to search for
+ * @return Pointer to zero-cross structure or NULL if not found
+ */
  static rbdimmer_zero_cross_t* find_zero_cross_by_phase(uint8_t phase);
+
+ /**
+ * @brief Find zero-cross detector by GPIO pin
+ * @internal
+  * @param[in] pin GPIO pin number to search for
+ * @return Pointer to zero-cross structure or NULL if not found
+ */
  static rbdimmer_zero_cross_t* find_zero_cross_by_pin(uint8_t pin);
+
+ /**
+ * @brief Zero-crossing interrupt service routine
+ * @internal
+  * Called on each zero-crossing detection. Handles frequency measurement
+ * and triggers dimmer timing for all associated channels.
+  * @param[in] arg GPIO pin number cast to void*
+  * @note Runs in interrupt context - must be fast!
+ */
  static void IRAM_ATTR zero_cross_isr_handler(void* arg);
+
+ /**
+ * @brief Convert brightness level to delay time
+ * @internal
+  * Converts a brightness percentage to microsecond delay based on
+ * the selected curve type and mains frequency.
+  * @param[in] level_percent Brightness level (0-100%)
+ * @param[in] half_cycle_us Half-cycle duration in microseconds
+ * @param[in] curve_type Selected brightness curve
+ * @return Delay time in microseconds
+ */
  static uint32_t level_to_delay(uint8_t level_percent, uint32_t half_cycle_us, rbdimmer_curve_t curve_type);
+ 
+ /**
+ * @brief Measure and detect mains frequency
+ * @internal
+ * Automatically detects mains frequency (50Hz or 60Hz) by measuring
+ * the period between zero-crossings.
+ * @param[in,out] zc Zero-cross structure to update
+ * @param[in] current_time Current timestamp in microseconds
+ */
  static void measure_frequency(rbdimmer_zero_cross_t* zc, uint32_t current_time);
+
+ /**
+ * @brief Update channel delay based on current parameters
+ * @internal
+ * Recalculates the delay time for a channel based on its brightness
+ * level, curve type, and mains frequency.
+ * @param[in,out] channel Channel to update
+ */
  static void update_channel_delay(rbdimmer_channel_t* channel);
+
+ /**
+ * @brief Timer callback for delay period
+ * @internal
+ * Called after the calculated delay period to turn on the TRIAC.
+ * @param[in] arg Pointer to channel structure
+ */
  static void IRAM_ATTR delay_timer_callback(void* arg);
+ 
+ /**
+ * @brief Timer callback for pulse duration
+ * @internal
+ * Called after the pulse duration to turn off the TRIAC.
+ * @param[in] arg Pointer to channel structure
+ */
  static void IRAM_ATTR pulse_timer_callback(void* arg);
  
  // Initialize the RBDimmer library
@@ -103,7 +208,7 @@
          return RBDIMMER_ERR_INVALID_ARG;
      }
      
-     // Проверяем корректность номера GPIO пина
+     // Validate GPIO pin number
      if (pin >= GPIO_NUM_MAX) {
          ESP_LOGE(TAG, "GPIO pin number out of range");
          return RBDIMMER_ERR_INVALID_ARG;
@@ -115,7 +220,7 @@
          ESP_LOGW(TAG, "Frequency out of recommended range, using default");
          frequency = RBDIMMER_DEFAULT_FREQUENCY;
          
-         // Если DEFAULT_FREQUENCY = 0, переключаемся в режим автоизмерения
+         // If DEFAULT_FREQUENCY = 0, enable auto-measurement mode
          if (frequency == 0) {
              ESP_LOGI(TAG, "Auto-measurement mode enabled");
          }
@@ -174,15 +279,15 @@
      if (frequency > 0) {
          zc->half_cycle_us = 1000000 / (2 * frequency);
      } else {
-         // При frequency=0 устанавливаем значение для 50 Гц, будет обновлено после измерения
-         zc->half_cycle_us = 10000; // 10 мс (предполагая 50 Гц)
+         // For frequency=0, set default value for 50Hz, will be updated after measurement
+         zc->half_cycle_us = 10000; // 10ms (assuming 50Hz)
      }
      zc->last_cross_time = 0;
      zc->callback = NULL;
      zc->user_data = NULL;
      zc->is_active = true;
      
-     // Инициализация полей для измерения частоты
+     // Initialize frequency measurement fields
      zc->frequency_measured = false;
      zc->measurement_count = 0;
      zc->total_period_us = 0;
@@ -198,7 +303,7 @@
          return RBDIMMER_ERR_INVALID_ARG;
      }
      
-     // Проверяем корректность номера GPIO пина
+     // Validate GPIO pin number
      if (config->gpio_pin >= GPIO_NUM_MAX) {
          ESP_LOGE(TAG, "GPIO pin number out of range: %d", config->gpio_pin);
          return RBDIMMER_ERR_INVALID_ARG;
@@ -328,17 +433,17 @@
      return RBDIMMER_OK;
  }
  
- // Структура параметров перехода для передачи в задачу
+ // Structure for smooth transition task parameters
  typedef struct {
-     rbdimmer_channel_t* channel;      // Канал диммера
-     uint8_t start_level;              // Начальная яркость
-     uint8_t target_level;             // Целевая яркость
-     uint32_t transition_ms;           // Время перехода в мс
-     uint32_t step_ms;                 // Время между шагами
-     TaskHandle_t task_handle;         // Хэндлер задачи для автоудаления
+     rbdimmer_channel_t* channel;      // Target channel
+     uint8_t start_level;              // Starting brightness
+     uint8_t target_level;             // Target brightness
+     uint32_t transition_ms;           // Total transition time in milliseconds
+     uint32_t step_ms;                 // Time between steps
+     TaskHandle_t task_handle;         // ask handle for cleanup
  } transition_params_t;
  
- // Задача для плавного изменения яркости
+ // FreeRTOS task that performs smooth brightness transitions by stepping through levels
  static void level_transition_task(void* pvParameters) {
      transition_params_t* params = (transition_params_t*)pvParameters;
      
@@ -348,39 +453,39 @@
      uint32_t steps = abs(target - current);
      uint32_t step_time = (steps > 0) ? (params->transition_ms / steps) : params->transition_ms;
      
-     // Убедиться, что шаг не меньше минимального времени
+     // Check if step time is too small
      if (step_time < params->step_ms) {
          step_time = params->step_ms;
      }
      
-     // Выполняем шаги изменения яркости
+     // Execute the transition
      while (current != target) {
-         // Обновляем яркость
+         // update the channel level
          rbdimmer_set_level(params->channel, current);
          
-         // Продвигаемся к цели
+         // going to target level
          current += step;
          
-         // Проверяем, не перескочили ли цель
+         // check, have passed the target level
          if ((step > 0 && current > target) || (step < 0 && current < target)) {
              current = target;
          }
          
-         // Ждем до следующего шага
+         // await for the next step
          vTaskDelay(pdMS_TO_TICKS(step_time));
      }
      
-     // Финальное обновление (на всякий случай)
+     // final update to ensure target level is set
      rbdimmer_set_level(params->channel, target);
      
-     // Очищаем ресурсы
+     // clean up resources
      free(params);
      
-     // Удаляем текущую задачу
+     // remove the task handle
      vTaskDelete(NULL);
  }
  
- // Обновленная функция плавного изменения яркости
+ // function to set level with smooth transition
  rbdimmer_err_t rbdimmer_set_level_transition(rbdimmer_channel_t* channel, uint8_t level_percent, uint32_t transition_ms) {
      if (channel == NULL) {
          return RBDIMMER_ERR_INVALID_ARG;
@@ -390,31 +495,31 @@
          level_percent = 100;
      }
      
-     // Если текущая яркость уже равна целевой, ничего не делаем
+     // if the level is already set, no need to transition
      if (channel->level_percent == level_percent) {
          return RBDIMMER_OK;
      }
      
-     // Если время перехода слишком маленькое, меняем мгновенно
+     // if transition time is zero, set level immediately
      if (transition_ms < 50) {
          return rbdimmer_set_level(channel, level_percent);
      }
      
-     // Создаем структуру параметров
+     // create parameters for the transition task
      transition_params_t* params = (transition_params_t*)malloc(sizeof(transition_params_t));
      if (params == NULL) {
          ESP_LOGE(TAG, "Failed to allocate memory for transition parameters");
          return RBDIMMER_ERR_NO_MEMORY;
      }
      
-     // Заполняем параметры
+     // fill parameters
      params->channel = channel;
      params->start_level = channel->level_percent;
      params->target_level = level_percent;
      params->transition_ms = transition_ms;
      params->step_ms = 20; // Минимальное время между шагами (50 Гц)
      
-     // Создаем задачу
+     // create the FreeRTOS task for the transition
      BaseType_t task_created = xTaskCreate(
          level_transition_task,
          "dimmer_transition",
@@ -674,11 +779,11 @@
  // Convert level percentage to delay
  static uint32_t level_to_delay(uint8_t level_percent, uint32_t half_cycle_us, rbdimmer_curve_t curve_type) {
      if (level_percent >= 100) {
-         return RBDIMMER_MIN_DELAY_US; // Минимальная задержка для макс. яркости
+         return RBDIMMER_MIN_DELAY_US; // minimal delay for full brightness
      }
      
      if (level_percent <= 0) {
-         return half_cycle_us - RBDIMMER_DEFAULT_PULSE_WIDTH_US; // Почти полная задержка
+         return half_cycle_us - RBDIMMER_DEFAULT_PULSE_WIDTH_US; // full delay for off state
      }
      
      uint8_t delay_percent;
@@ -696,7 +801,7 @@
              break;
      }
      
-     // Преобразуем процент задержки в микросекунды
+     // modify delay based on half-cycle duration
      uint32_t delay_us = (half_cycle_us * delay_percent) / 100;
      
      // Применяем ограничения
@@ -713,7 +818,7 @@
  
  // Measure mains frequency based on zero-cross events
  static void measure_frequency(rbdimmer_zero_cross_t* zc, uint32_t current_time) {
-     // Если частота уже определена, ничего не делаем
+     // if frequency already measured, skip
      if (zc->frequency_measured) {
          return;
      }
@@ -721,17 +826,17 @@
      if (zc->last_cross_time > 0) {
          uint32_t period_us = current_time - zc->last_cross_time;
          
-         // Отбрасываем слишком короткие или длинные периоды как шум
+         // noice filtering
          if (period_us > 5000 && period_us < 15000) {
              zc->total_period_us += period_us;
              zc->measurement_count++;
              
-             // После сбора данных за 10 полных циклов (20 полупериодов)
+             // after 20 measurements, calculate average
              if (zc->measurement_count >= 20) {
-                 // Вычисляем средний период
+                 // calculate average half-cycle duration
                  uint32_t avg_half_cycle_us = zc->total_period_us / zc->measurement_count;
                  
-                 // Проверяем соответствие распространенным частотам
+                 // compare with stadard values 50/60 Hz
                  // Допуск ±10% от ожидаемых значений
                  
                  // 50 Гц -> полупериод = 10000 мкс (±1000 мкс)
@@ -746,9 +851,9 @@
                      zc->half_cycle_us = 8333;
                      zc->frequency_measured = true;
                  } 
-                 // Неизвестная частота
+                 // unknown frequency
                  else {
-                     // Сообщаем об ошибке и сбрасываем счетчик для повторного измерения
+                     // notify about unknown frequency
                      ESP_LOGE(TAG, "Unknown mains frequency detected! Average half-cycle: %d us", avg_half_cycle_us);
                      zc->frequency = 0;
                      zc->frequency_measured = false;
@@ -846,25 +951,25 @@
          zc->callback(zc->user_data);
      }
      
-     // Запускаем таймеры для всех каналов на этой фазе
+     // call timer handlers for all channels associated with this zero-cross
      for (int i = 0; i < dimmer_manager.count; i++) {
          rbdimmer_channel_t* channel = dimmer_manager.channels[i];
  
          if (channel->is_active && channel->phase == zc->phase) {
-             // Запускаем таймеры только если канал в исходном состоянии
+             // call timer handlers only if channel is active
              if (channel->timer_state == TIMER_STATE_IDLE) {
-                 // Останавливаем любые запущенные таймеры (для безопасности)
+                 // stop all timers to reset state
                  esp_timer_stop(channel->delay_timer);
                  esp_timer_stop(channel->pulse_timer);
                  
-                 // Запускаем таймер задержки (включит выход)
+                 // start delay timer with calculated delay
                  esp_timer_start_once(channel->delay_timer, channel->current_delay);
                  
-                 // Запускаем таймер импульса (выключит выход)
+                 // start pulse timer after delay + pulse width
                  esp_timer_start_once(channel->pulse_timer, 
                      channel->current_delay + RBDIMMER_DEFAULT_PULSE_WIDTH_US);
                  
-                 // Обновляем состояние
+                 // state update
                  channel->timer_state = TIMER_STATE_DELAY;
              }
          }

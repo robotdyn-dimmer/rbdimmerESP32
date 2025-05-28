@@ -5,6 +5,21 @@
  * This library provides an easy-to-use interface for controlling AC dimmers
  * with ESP32 microcontrollers, utilizing hardware features like timers and 
  * hardware interrupts for precise and efficient dimming control.
+ * 
+ * @author dev@rbdimmer.com
+ * @version 1.0.0
+ * @date 2024
+ * 
+ * @see Dimmers website: https://rbdimmer.com
+ * @see Library repository: https://github.com/robotdyn-dimmer/rbdimmerESP32
+ * @see Dimmers catalog: https://www.rbdimmer.com/dimmers-pricing
+ * @see Dimmers documentation: https://www.rbdimmer.com/knowledge/article/45
+ * @see Library documentation: https://www.rbdimmer.com/knowledge/article/59
+ * @see Dimmers projects: https://www.rbdimmer.com/blog/dimmers-projects-5
+ * @see Support and community: https://www.rbdimmer.com/forum
+ * 
+ * @copyright Copyright (c) 2024 RBDimmer
+ * @license MIT License
  */
 
  #ifndef RBDIMMER_H

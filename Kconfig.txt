@@ -1,0 +1,138 @@
+# Kconfig.projbuild for rbdimmerESP32 library
+# This file creates configuration menu items in ESP-IDF menuconfig
+# 
+# Users can configure the library parameters through:
+# idf.py menuconfig -> Component config -> RBDimmer AC Dimmer Library
+#
+# Author: dev@rbdimmer.com
+# Version: 1.0.0
+# Website: https://rbdimmer.com
+
+menu "RBDimmer AC Dimmer Library"
+
+    config RBDIMMER_MAX_CHANNELS
+        int "Maximum number of dimmer channels"
+        default 8
+        range 1 16
+        help
+            Sets the maximum number of dimmer channels that can be created.
+            Each channel controls one dimmer output.
+            Default is 8 channels, which is suitable for most applications.
+            Reduce this value to save memory in constrained systems.
+
+    config RBDIMMER_MAX_PHASES
+        int "Maximum number of AC phases"
+        default 4
+        range 1 4
+        help
+            Sets the maximum number of AC phases supported.
+            For single-phase systems, set to 1.
+            For three-phase systems, set to 3.
+            Default is 4 to support three-phase + neutral configurations.
+
+    config RBDIMMER_DEFAULT_PULSE_WIDTH_US
+        int "Default TRIAC pulse width (microseconds)"
+        default 50
+        range 20 200
+        help
+            Sets the default pulse width for TRIAC triggering in microseconds.
+            This value should match your dimmer hardware specifications.
+            Default is 50us, which works with most TRIAC dimmers.
+            WARNING: Do not change unless you know your hardware requirements!
+
+    config RBDIMMER_MIN_DELAY_US
+        int "Minimum triggering delay (microseconds)"
+        default 50
+        range 20 500
+        help
+            Sets the minimum delay before TRIAC can be triggered after zero-cross.
+            This ensures safe TRIAC operation and prevents misfiring.
+            Default is 50us, suitable for most applications.
+
+    config RBDIMMER_DEFAULT_FREQUENCY
+        int "Default mains frequency (Hz)"
+        default 0
+        range 0 60
+        help
+            Sets the default mains frequency in Hz.
+            Set to 0 for automatic frequency detection (recommended).
+            Set to 50 for 50Hz mains (Europe, Asia, Africa).
+            Set to 60 for 60Hz mains (Americas, parts of Asia).
+
+    config RBDIMMER_ENABLE_DEBUG_LOG
+        bool "Enable debug logging"
+        default n
+        help
+            Enables detailed debug logging for troubleshooting.
+            This will increase code size and may impact performance.
+            Enable only during development or when debugging issues.
+
+    config RBDIMMER_USE_RTOS_TRANSITIONS
+        bool "Use FreeRTOS tasks for smooth transitions"
+        default y
+        help
+            Enables smooth brightness transitions using FreeRTOS tasks.
+            When enabled, rbdimmer_set_level_transition() creates a task
+            that smoothly changes brightness over time.
+            Disable to save memory if smooth transitions are not needed.
+
+    config RBDIMMER_TRANSITION_TASK_STACK_SIZE
+        int "Transition task stack size (bytes)"
+        default 2048
+        range 1024 4096
+        depends on RBDIMMER_USE_RTOS_TRANSITIONS
+        help
+            Stack size for brightness transition tasks in bytes.
+            Increase if you experience stack overflow in transition tasks.
+            Default 2048 bytes is suitable for most applications.
+
+    config RBDIMMER_TRANSITION_TASK_PRIORITY
+        int "Transition task priority"
+        default 5
+        range 1 25
+        depends on RBDIMMER_USE_RTOS_TRANSITIONS
+        help
+            FreeRTOS priority for brightness transition tasks.
+            Higher number = higher priority.
+            Default 5 is medium priority, suitable for most applications.
+
+    choice RBDIMMER_DEFAULT_CURVE
+        prompt "Default brightness curve"
+        default RBDIMMER_DEFAULT_CURVE_RMS
+        help
+            Select the default brightness curve for new channels.
+            This can be changed per channel at runtime.
+
+        config RBDIMMER_DEFAULT_CURVE_LINEAR
+            bool "Linear"
+            help
+                Simple linear mapping. May not provide linear perceived brightness.
+
+        config RBDIMMER_DEFAULT_CURVE_RMS
+            bool "RMS Compensated"
+            help
+                Compensates for RMS power delivery. Best for incandescent bulbs.
+
+        config RBDIMMER_DEFAULT_CURVE_LOGARITHMIC
+            bool "Logarithmic"
+            help
+                Logarithmic curve for linear perceived brightness. Best for LED loads.
+    endchoice
+
+    config RBDIMMER_ISR_IRAM_SAFE
+        bool "Place ISR handlers in IRAM"
+        default y
+        help
+            Places interrupt handlers in IRAM for faster execution.
+            Disable only if you have severe IRAM constraints.
+            WARNING: Disabling may cause timing issues!
+
+    config RBDIMMER_STATS_ENABLED
+        bool "Enable statistics collection"
+        default n
+        help
+            Enables collection of runtime statistics like interrupt count,
+            timing accuracy, etc. Useful for performance analysis.
+            Increases memory usage and processing overhead.
+
+endmenu

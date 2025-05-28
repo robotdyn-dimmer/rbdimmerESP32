@@ -1,0 +1,85 @@
+{
+  "name": "rbdimmerESP32",
+  "version": "1.0.0",
+  "description": "Professional AC dimmer control library for ESP32 microcontrollers with hardware optimization",
+  "keywords": [
+    "dimmer",
+    "ac-dimmer",
+    "triac",
+    "phase-control",
+    "esp32",
+    "lighting-control",
+    "pwm",
+    "zero-cross",
+    "home-automation",
+    "iot",
+    "rbdimmer"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robotdyn-dimmer/rbdimmerESP32.git"
+  },
+  "authors": [
+    {
+      "name": "RBDimmer",
+      "email": "dev@rbdimmer.com",
+      "url": "https://rbdimmer.com",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://rbdimmer.com",
+  "dependencies": {
+  },
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "platforms": [
+    "espressif32"
+  ],
+  "headers": "rbdimmerESP32.h",
+  "examples": [
+    {
+      "name": "Basic Dimmer Control",
+      "base": "examples/arduino/BasicDimmer",
+      "files": ["BasicDimmer.ino"]
+    },
+    {
+      "name": "Smooth Transitions",
+      "base": "examples/arduino/BasicTransition",
+      "files": ["BasicTransition.ino"]
+    },
+    {
+      "name": "Multi-Channel System",
+      "base": "examples/arduino/MultiDimmer",
+      "files": ["MultiDimmer.ino"]
+    },
+    {
+      "name": "Zero-Cross Callback",
+      "base": "examples/arduino/ZCCallBack",
+      "files": ["ZCCallBack.ino"]
+    }
+  ],
+  "export": {
+    "include": [
+      "src/*",
+      "examples/*",
+      "README.md",
+      "LICENSE",
+      "library.json",
+      "library.properties"
+    ]
+  },
+  "build": {
+    "srcDir": "src",
+    "srcFilter": [
+      "+<*.h>",
+      "+<*.c>",
+      "+<*.cpp>"
+    ],
+    "flags": [
+      "-I src"
+    ]
+  }
+}
