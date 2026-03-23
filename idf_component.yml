@@ -6,7 +6,7 @@ description: "Professional AC dimmer control library for ESP32 — TRIAC phase-c
 url: "https://rbdimmer.com"
 repository: "https://github.com/robotdyn-dimmer/rbdimmerESP32"
 issues: "https://github.com/robotdyn-dimmer/rbdimmerESP32/issues"
-documentation: "https://www.rbdimmer.com/knowledge/article/59"
+documentation: "https://www.rbdimmer.com/docs/universal-library-for-esp32"
 license: "MIT"
 
 targets:
