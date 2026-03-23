@@ -1,0 +1,115 @@
+# Kconfig.projbuild for rbdimmerESP32 library
+# This file creates configuration menu items in ESP-IDF menuconfig
+# 
+# Users can configure the library parameters through:
+# idf.py menuconfig -> Component config -> RBDimmer AC Dimmer Library
+#
+# Author: dev@rbdimmer.com
+# Version: 1.0.0
+# Website: https://rbdimmer.com
+
+menu "RBDimmer AC Dimmer Library"
+
+    config RBDIMMER_MAX_CHANNELS
+        int "Maximum number of dimmer channels"
+        default 4 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C6
+        default 8
+        range 1 16
+        help
+            Sets the maximum number of dimmer channels that can be created.
+            Each channel controls one dimmer output.
+
+            Default is 8 for most chips.
+            Default is 4 for ESP32-C3 (22 GPIO total) and ESP32-C6 (31 GPIO
+            total) where fewer pins are available after flash/USB peripherals.
+
+            Reduce this value to save memory in constrained systems.
+
+    config RBDIMMER_MAX_PHASES
+        int "Maximum number of AC phases"
+        default 4
+        range 1 4
+        help
+            Sets the maximum number of AC phases supported.
+            For single-phase systems, set to 1.
+            For three-phase systems, set to 3.
+            Default is 4 to support three-phase + neutral configurations.
+
+    config RBDIMMER_DEFAULT_PULSE_WIDTH_US
+        int "Default TRIAC pulse width (microseconds)"
+        default 50
+        range 20 200
+        help
+            Sets the default pulse width for TRIAC triggering in microseconds.
+            This value should match your dimmer hardware specifications.
+            Default is 50us, which works with most TRIAC dimmers.
+            WARNING: Do not change unless you know your hardware requirements!
+
+    config RBDIMMER_MIN_DELAY_US
+        int "Minimum triggering delay after ZC (microseconds)"
+        default 100
+        range 50 500
+        help
+            Minimum delay from zero-cross to TRIAC gate pulse.
+            100 us ≈ 1.8° firing angle at 50 Hz — reliable esp_timer ISR
+            dispatch and sufficient AC voltage for TRIAC latching.
+            50 us (old default) caused occasional missed pulses at 100% level.
+
+    config RBDIMMER_ZC_DEBOUNCE_US
+        int "Zero-cross noise gate (microseconds)"
+        default 3000
+        range 1000 9000
+        help
+            Minimum time between two valid zero-cross edges.
+            Rejects TRIAC-induced spikes and optocoupler bounce that would
+            reset the delay timer mid half-cycle and cause flickering.
+            3000 us gives 70% tolerance on the nominal 50/60 Hz half-period.
+
+    config RBDIMMER_LEVEL_MIN
+        int "Minimum output level (%)"
+        default 3
+        range 0 10
+        help
+            Levels below this threshold are treated as OFF (delay = 0).
+            At very low levels the TRIAC fires too close to the end of the
+            half-cycle and latches unreliably. Default 3%.
+
+    config RBDIMMER_LEVEL_MAX
+        int "Maximum output level (%)"
+        default 99
+        range 90 100
+        help
+            Levels above this threshold use this value for timing.
+            At 100% the required delay (~50 us) is at the edge of esp_timer
+            reliability and near-zero AC voltage. Default 99% maps to
+            ~100 us delay which fires stably. Default 99%.
+
+    config RBDIMMER_DEFAULT_FREQUENCY
+        int "Default mains frequency (Hz)"
+        default 0
+        range 0 60
+        help
+            Sets the default mains frequency in Hz.
+            Set to 0 for automatic frequency detection (recommended).
+            Set to 50 for 50Hz mains (Europe, Asia, Africa).
+            Set to 60 for 60Hz mains (Americas, parts of Asia).
+
+    config RBDIMMER_TRANSITION_TASK_STACK_SIZE
+        int "Transition task stack size (bytes)"
+        default 2048
+        range 1024 4096
+        help
+            Stack size for brightness transition tasks in bytes.
+            Increase if you experience stack overflow in transition tasks.
+            Default 2048 bytes is suitable for most applications.
+
+    config RBDIMMER_TRANSITION_TASK_PRIORITY
+        int "Transition task priority"
+        default 5
+        range 1 25
+        help
+            FreeRTOS priority for brightness transition tasks.
+            Higher number = higher priority.
+            Default 5 is medium priority, suitable for most applications.
+
+endmenu

@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"name": "rbzc_platformtest",
+			"path": "../../../../rbzc_platformtest"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"cmath": "cpp",
+			"functional": "cpp",
+			"array": "cpp",
+			"deque": "cpp",
+			"string": "cpp",
+			"unordered_map": "cpp",
+			"unordered_set": "cpp",
+			"vector": "cpp",
+			"string_view": "cpp",
+			"initializer_list": "cpp"
+		}
+	}
+}

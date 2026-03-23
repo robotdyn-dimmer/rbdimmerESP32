@@ -1,0 +1,76 @@
+name: Build Matrix
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Arduino framework — all chips × all examples
+  # Uses arduino/compile-sketches with arduino-esp32 Core 3.x (ESP-IDF 5.x)
+  # source-path: "." because this workflow lives inside the library repo root
+  # ---------------------------------------------------------------------------
+  arduino:
+    name: Arduino / ${{ matrix.board.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        board:
+          - name: ESP32
+            fqbn: esp32:esp32:esp32
+          - name: ESP32-S2
+            fqbn: esp32:esp32:esp32s2
+          - name: ESP32-S3
+            fqbn: esp32:esp32:esp32s3
+          - name: ESP32-C3
+            fqbn: esp32:esp32:esp32c3
+          - name: ESP32-C6
+            fqbn: esp32:esp32:esp32c6
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/compile-sketches@v1
+        with:
+          fqbn: ${{ matrix.board.fqbn }}
+          platforms: |
+            - name: esp32:esp32
+              source-url: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+              version: 3.*
+          libraries: |
+            - source-path: .
+          sketch-paths: |
+            - examples/arduino/BasicDimmer
+            - examples/arduino/BasicTransition
+            - examples/arduino/MultiDimmer
+            - examples/arduino/ZCCallBack
+          enable-deltas-report: false
+
+  # ---------------------------------------------------------------------------
+  # ESP-IDF framework — all chips
+  # Builds test_app/ which pulls in the library via EXTRA_COMPONENT_DIRS
+  # ---------------------------------------------------------------------------
+  espidf:
+    name: ESP-IDF ${{ matrix.idf_version }} / ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        idf_version: [v5.3, v5.4, v5.5]
+        target:
+          - esp32
+          - esp32s2
+          - esp32s3
+          - esp32c3
+          - esp32c6
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: ${{ matrix.idf_version }}
+          target: ${{ matrix.target }}
+          path: "test_app"
+          command: idf.py build

@@ -5,27 +5,68 @@
  * This library provides an easy-to-use interface for controlling AC dimmers
  * with ESP32 microcontrollers, utilizing hardware features like timers and 
  * hardware interrupts for precise and efficient dimming control.
+ * 
+ * @author dev@rbdimmer.com
+ * @version 1.0.0
+ * @date 2024
+ * 
+ * @see Dimmers website: https://rbdimmer.com
+ * @see Library repository: https://github.com/robotdyn-dimmer/rbdimmerESP32
+ * @see Dimmers catalog: https://www.rbdimmer.com/dimmers-pricing
+ * @see Dimmers documentation: https://www.rbdimmer.com/knowledge/article/45
+ * @see Library documentation: https://www.rbdimmer.com/knowledge/article/59
+ * @see Dimmers projects: https://www.rbdimmer.com/blog/dimmers-projects-5
+ * @see Support and community: https://www.rbdimmer.com/forum
+ * 
+ * @copyright Copyright (c) 2024 RBDimmer
+ * @license MIT License
  */
 
  #ifndef RBDIMMER_H
  #define RBDIMMER_H
  
- #include <Arduino.h>
+ #ifdef ARDUINO
+   #include <Arduino.h>
+ #else
+   #include <stdint.h>
+   #include <stdbool.h>
+   #include <stddef.h>
+ #endif
  #include <driver/gpio.h>
  
  #ifdef __cplusplus
  extern "C" {
  #endif
  
- // Constants
- #define RBDIMMER_MAX_PHASES 4                 // Maximum number of phases
- #define RBDIMMER_MAX_CHANNELS 8               // Maximum number of channels
- #define RBDIMMER_DEFAULT_PULSE_WIDTH_US 50    // Default pulse width in microseconds
- #define RBDIMMER_DEFAULT_FREQUENCY 0          // Default mains frequency (50 Hz)
+ // Constants — use Kconfig values when building with ESP-IDF, else use defaults
+ #ifdef CONFIG_RBDIMMER_MAX_PHASES
+   #define RBDIMMER_MAX_PHASES              CONFIG_RBDIMMER_MAX_PHASES
+ #else
+   #define RBDIMMER_MAX_PHASES              4
+ #endif
+
+ #ifdef CONFIG_RBDIMMER_MAX_CHANNELS
+   #define RBDIMMER_MAX_CHANNELS            CONFIG_RBDIMMER_MAX_CHANNELS
+ #else
+   #define RBDIMMER_MAX_CHANNELS            8
+ #endif
+
+ #ifdef CONFIG_RBDIMMER_DEFAULT_PULSE_WIDTH_US
+   #define RBDIMMER_DEFAULT_PULSE_WIDTH_US  CONFIG_RBDIMMER_DEFAULT_PULSE_WIDTH_US
+ #else
+   #define RBDIMMER_DEFAULT_PULSE_WIDTH_US  100
+ #endif
+
+ #ifdef CONFIG_RBDIMMER_MIN_DELAY_US
+   #define RBDIMMER_MIN_DELAY_US            CONFIG_RBDIMMER_MIN_DELAY_US
+ #else
+   #define RBDIMMER_MIN_DELAY_US            100
+ #endif
+
+ #define RBDIMMER_DEFAULT_FREQUENCY 0          // 0 = auto-detect
  #define RBDIMMER_FREQUENCY_MIN 45             // Minimum allowed frequency
  #define RBDIMMER_FREQUENCY_MAX 65             // Maximum allowed frequency
  #define RBDIMMER_MEASURE_CYCLES 10            // Number of cycles for frequency measurement
- #define RBDIMMER_MIN_DELAY_US 50              // Minimum delay for safe triac operation
  
  // Enumerations
  typedef enum {
@@ -49,14 +90,7 @@
      RBDIMMER_ERR_TIMER_FAILED,                // Timer initialization failed
      RBDIMMER_ERR_GPIO_FAILED                  // GPIO initialization failed
  } rbdimmer_err_t;
- 
- // Timer state enum
- typedef enum {
-     TIMER_STATE_IDLE,        // Waiting for zero-crossing
-     TIMER_STATE_DELAY,       // Waiting for delay to finish
-     TIMER_STATE_PULSE_ON,    // Pulse is active, waiting to turn off
- } timer_state_t;
- 
+
  // Forward declarations for opaque types
  typedef struct rbdimmer_channel_s rbdimmer_channel_t;
  
