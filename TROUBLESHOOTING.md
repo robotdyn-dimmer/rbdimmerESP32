@@ -103,29 +103,7 @@ fatal error: rbdimmerESP32.h: No such file or directory
    - Library should be in: `~/Documents/Arduino/libraries/rbdimmerESP32/`
    - Ensure `rbdimmerESP32.h` is in `src/` folder
 
-#### PlatformIO
-1. **Check platformio.ini**:
-   ```ini
-   [env:esp32dev]
-   platform = espressif32
-   board = esp32dev
-   framework = arduino
-   lib_deps = rbdimmerESP32
-   ```
-
-2. **Force Library Update**:
-   ```bash
-   pio lib update
-   pio lib install
-   ```
-
-3. **Clean and Rebuild**:
-   ```bash
-   pio run --target clean
-   pio run
-   ```
-
-### Problem: Compilation Errors
+#### Problem: Compilation Errors
 
 **Error Messages:**
 ```
@@ -138,7 +116,6 @@ error: 'digitalRead' was not declared in this scope
 1. **Check Board Selection**:
    - Must be ESP32 board type
    - Arduino IDE: **Tools** -> **Board** -> **ESP32**
-   - PlatformIO: `board = esp32dev` (or similar)
 
 2. **Update ESP32 Core**:
    - Arduino IDE: **Tools** -> **Board** -> **Boards Manager**
@@ -146,7 +123,6 @@ error: 'digitalRead' was not declared in this scope
    - ESP-IDF users: v5.3 or later required
 
 3. **Check Framework**:
-   - PlatformIO: Ensure `framework = arduino` in platformio.ini
 
 **Error Messages:**
 ```
@@ -182,14 +158,6 @@ undefined reference to `rbdimmer_init'
    ```
 
    The library uses a modular architecture with its own `Kconfig` file. ESP-IDF will automatically pick up the Kconfig options when the component is registered correctly.
-
-2. **PlatformIO Build Flags**:
-   ```ini
-   build_flags =
-       -DARDUINO_ARCH_ESP32
-   ```
-
-## Runtime Errors
 
 ### Problem: Library Initialization Fails
 
@@ -912,7 +880,7 @@ void diagnose_multi_channel() {
 
 ## Kconfig Tuning
 
-v2.0.0 exposes four parameters via Kconfig (ESP-IDF `menuconfig`) or as compile-time defines for Arduino/PlatformIO. These control the flickering fixes and should only be changed if the defaults do not suit your hardware.
+v2.0.0 exposes four parameters via Kconfig (ESP-IDF `menuconfig`) or as compile-time defines for Arduino. These control the flickering fixes and should only be changed if the defaults do not suit your hardware.
 
 ### ZC_DEBOUNCE_US -- Zero-Cross Debounce Window
 
@@ -970,7 +938,7 @@ idf.py menuconfig
 -> Component config -> RBDimmer ESP32
 ```
 
-**Arduino / PlatformIO (compile-time defines):**
+**Arduino (compile-time defines):**
 ```ini
 # platformio.ini
 build_flags =
@@ -1133,7 +1101,7 @@ If none of these match, also check:
 
 ### Q: What ESP-IDF version is required?
 
-**A:** ESP-IDF 5.3 or later is required for v2.0.0. The library uses Kconfig for parameter configuration, which integrates with the ESP-IDF `menuconfig` system. Arduino and PlatformIO users can set parameters via compile-time defines instead.
+**A:** ESP-IDF 5.3 or later is required for v2.0.0. The library uses Kconfig for parameter configuration, which integrates with the ESP-IDF `menuconfig` system. Arduino users can set parameters via compile-time defines instead.
 
 ## Getting Additional Help
 
@@ -1183,7 +1151,7 @@ Brief description of the issue
 - Wiring: [pin connections]
 
 ## Software Environment
-- IDE: [Arduino IDE 2.1.0 / PlatformIO]
+- IDE: [Arduino IDE 2.x]
 - ESP32 Core / ESP-IDF: [version]
 - Library Version: [2.0.0]
 - Kconfig overrides: [list any non-default values]
