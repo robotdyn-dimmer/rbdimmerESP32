@@ -55,4 +55,4 @@ Complete architectural rewrite. The monolithic single-file implementation has be
 - Three brightness curves: LINEAR, RMS, LOGARITHMIC
 - Multi-channel and multi-phase support
 - Smooth transitions via FreeRTOS tasks
-- Arduino IDE, PlatformIO, and ESP-IDF support
+- Arduino IDE and ESP-IDF support
