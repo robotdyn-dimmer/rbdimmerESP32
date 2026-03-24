@@ -1,4 +1,7 @@
 # Changelog
+> [!NOTE]
+> **Library GitHub:** [https://github.com/robotdyn-dimmer/rbdimmerESP32](https://github.com/robotdyn-dimmer/rbdimmerESP32)
+
 
 All notable changes to the rbdimmerESP32 library will be documented in this file.
 
