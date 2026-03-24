@@ -1,12 +1,14 @@
 # rbdimmerESP32 API Reference
 
+> Updated for v2.0.0 -- public API is unchanged, but internal architecture is fully modular.
+
 ## Table of Contents
 
 1. [Overview](#overview)
 2. [Data Types](#data-types)
 3. [Constants](#constants)
 4. [Initialization Functions](#initialization-functions)
-5. [Zero-Cross Management](#zero-cross-management) 
+5. [Zero-Cross Management](#zero-cross-management)
 6. [Channel Management](#channel-management)
 7. [Level Control](#level-control)
 8. [Configuration Functions](#configuration-functions)
@@ -26,6 +28,7 @@ The rbdimmerESP32 library provides a comprehensive API for controlling AC dimmer
 - **Hardware Optimized**: Uses ESP32 hardware timers for microsecond precision
 - **Resource Managed**: Automatic cleanup and error handling
 - **Extensible**: Support for multiple phases and channels
+- **Modular** (v2.0.0): Internal architecture is fully modular -- curve engine, timer backend, and zero-cross detector are independent components
 
 ## Data Types
 
@@ -92,6 +95,8 @@ Defines the brightness curve type for power calculation.
 - **LOGARITHMIC**: Perceptually linear for LED loads
 - **CUSTOM**: Reserved for future custom curve implementation
 
+**Level clamping (v2.0.0):** All curve calculations enforce LEVEL_MIN and LEVEL_MAX boundaries. Levels >= 100% are clamped to RBDIMMER_LEVEL_MAX (99% by default). Levels below RBDIMMER_LEVEL_MIN (3% by default) return delay = 0, which means the channel is OFF. This prevents unreliable TRIAC firing at near-zero or near-full conduction angles.
+
 #### `rbdimmer_err_t`
 ```c
 typedef enum {
@@ -129,8 +134,31 @@ Internal timer state enumeration (used internally by the library).
 ### Timing Constants
 ```c
 #define RBDIMMER_DEFAULT_PULSE_WIDTH_US 50    // Default pulse width in microseconds
-#define RBDIMMER_MIN_DELAY_US 50              // Minimum delay for safe triac operation
+#define RBDIMMER_MIN_DELAY_US 100             // Minimum delay for safe triac operation (was 50 in v1)
 ```
+
+### Zero-Cross Noise Gate (v2.0.0)
+```c
+#define RBDIMMER_ZC_DEBOUNCE_US 3000          // Noise gate window in microseconds
+```
+
+After a zero-crossing interrupt fires, subsequent interrupts within this window are
+ignored. This eliminates false triggers from electrical noise near the zero-cross point.
+The default of 3000 us works well for both 50 Hz and 60 Hz mains (half-cycle is 8333 us
+at 60 Hz and 10000 us at 50 Hz, so 3 ms is safely below either).
+
+### Level Boundary Constants (v2.0.0)
+```c
+#define RBDIMMER_LEVEL_MIN 3                  // Levels below this -> OFF (delay = 0)
+#define RBDIMMER_LEVEL_MAX 99                 // Levels above this -> capped to this value
+```
+
+These constants define the effective operating range for all curve calculations:
+
+- **RBDIMMER_LEVEL_MIN (3%)**: Requesting a level below this threshold produces a delay of 0, meaning the TRIAC never fires and the channel is fully OFF. This avoids unreliable partial conduction at very low duty cycles.
+- **RBDIMMER_LEVEL_MAX (99%)**: Requesting a level of 100% or higher is clamped to this value. This ensures a minimal delay is always applied, preventing the TRIAC pulse from overlapping the zero-cross point.
+
+**Configurability:** In ESP-IDF projects, these constants can be overridden via Kconfig (`menuconfig`). In Arduino projects, they act as compile-time defaults and can be redefined before including the library header.
 
 ### Frequency Constants
 ```c
@@ -233,6 +261,8 @@ rbdimmer_register_zero_cross(3, 1, 60);
 - Frequency 0 enables automatic detection (recommended)
 - Each phase requires a separate zero-cross detector
 
+**Noise gate (v2.0.0):** After each detected zero-crossing, the ISR ignores further interrupts on the same phase for RBDIMMER_ZC_DEBOUNCE_US microseconds (default 3000). This suppresses false triggers caused by noise, ringing, or slow-rise zero-cross signals. The debounce window is applied per-phase, so multi-phase systems are handled independently.
+
 ## Channel Management
 
 ### `rbdimmer_create_channel()`
@@ -331,14 +361,15 @@ rbdimmer_set_level(my_channel, 50);
 // Turn off
 rbdimmer_set_level(my_channel, 0);
 
-// Full brightness
+// Full brightness (clamped to LEVEL_MAX = 99%)
 rbdimmer_set_level(my_channel, 100);
 ```
 
 **Notes:**
 - Level changes take effect on the next zero-crossing
-- Values above 100 are clamped to 100
-- Level 0 = fully off, Level 100 = fully on
+- Values >= 100 are clamped to RBDIMMER_LEVEL_MAX (99%)
+- Values below RBDIMMER_LEVEL_MIN (3%) result in the channel being OFF (delay = 0)
+- Level 0 = fully off
 - Thread-safe - can be called from any task
 
 ### `rbdimmer_set_level_transition()`
@@ -373,6 +404,7 @@ rbdimmer_set_level_transition(my_channel, 0, 500);
 - Minimum transition time is 50ms
 - Transitions shorter than 50ms use immediate setting
 - Multiple transitions can run simultaneously on different channels
+- Target level is subject to the same LEVEL_MIN / LEVEL_MAX clamping as `rbdimmer_set_level()`
 
 ## Configuration Functions
 
@@ -407,6 +439,7 @@ rbdimmer_set_curve(my_channel, RBDIMMER_CURVE_LINEAR);
 - Change takes effect on next zero-crossing
 - Different curves optimize for different load types
 - Can be changed during operation without restart
+- All curves enforce LEVEL_MIN / LEVEL_MAX boundaries
 
 ### `rbdimmer_set_active()`
 ```c
@@ -561,6 +594,8 @@ Serial.printf("Current delay: %d microseconds\n", delay_us);
 - Useful for debugging and optimization
 - Delay varies with brightness level and curve type
 - Measured from zero-crossing to TRIAC trigger
+- Returns 0 when the level is below RBDIMMER_LEVEL_MIN (channel OFF)
+- Minimum non-zero value is RBDIMMER_MIN_DELAY_US (100 us)
 
 ## Callback Functions
 
@@ -598,7 +633,7 @@ void my_zero_cross_callback(void* user_data) {
     callback_data_t* data = (callback_data_t*)user_data;
     data->cross_count++;
     data->last_time = millis();
-    
+
     // Note: Keep ISR code minimal and fast!
     if (data->cross_count % 100 == 0) {
         // Schedule a task to print statistics
@@ -616,6 +651,7 @@ rbdimmer_set_callback(0, my_zero_cross_callback, &cb_data);
 - No blocking operations (delays, prints, etc.)
 - Use FreeRTOS queues for communication with tasks
 - Callback is called on every zero-crossing (100-120 times per second)
+- In v2.0.0, the callback fires only for valid zero-crossings that pass the noise gate (debounce). Spurious triggers within RBDIMMER_ZC_DEBOUNCE_US of a previous crossing do not invoke the callback.
 
 ## Utility Functions
 
@@ -696,19 +732,19 @@ rbdimmer_channel_t* dimmer;
 
 void setup() {
     Serial.begin(115200);
-    
+
     // Initialize library
     if (rbdimmer_init() != RBDIMMER_OK) {
         Serial.println("Library initialization failed");
         return;
     }
-    
+
     // Register zero-cross detector
     if (rbdimmer_register_zero_cross(2, 0, 0) != RBDIMMER_OK) {
         Serial.println("Zero-cross registration failed");
         return;
     }
-    
+
     // Create dimmer channel
     rbdimmer_config_t config = {
         .gpio_pin = 4,
@@ -716,12 +752,12 @@ void setup() {
         .initial_level = 0,
         .curve_type = RBDIMMER_CURVE_RMS
     };
-    
+
     if (rbdimmer_create_channel(&config, &dimmer) != RBDIMMER_OK) {
         Serial.println("Channel creation failed");
         return;
     }
-    
+
     Serial.println("Setup complete");
 }
 
@@ -729,7 +765,7 @@ void loop() {
     // Fade up over 2 seconds
     rbdimmer_set_level_transition(dimmer, 100, 2000);
     delay(3000);
-    
+
     // Fade down over 1 second
     rbdimmer_set_level_transition(dimmer, 0, 1000);
     delay(2000);
@@ -747,10 +783,10 @@ uint8_t dimmer_pins[] = {4, 5, 6};
 
 void setup() {
     Serial.begin(115200);
-    
+
     rbdimmer_init();
     rbdimmer_register_zero_cross(2, 0, 0);
-    
+
     // Create multiple channels
     for (int i = 0; i < NUM_CHANNELS; i++) {
         rbdimmer_config_t config = {
@@ -759,10 +795,10 @@ void setup() {
             .initial_level = 0,
             .curve_type = RBDIMMER_CURVE_RMS
         };
-        
+
         rbdimmer_create_channel(&config, &channels[i]);
     }
-    
+
     Serial.println("Multi-channel setup complete");
 }
 
@@ -772,14 +808,14 @@ void loop() {
         rbdimmer_set_level_transition(channels[i], 100, 1000);
         delay(500);
     }
-    
+
     delay(2000);
-    
+
     // All off together
     for (int i = 0; i < NUM_CHANNELS; i++) {
         rbdimmer_set_level_transition(channels[i], 0, 1000);
     }
-    
+
     delay(2000);
 }
 ```
@@ -801,7 +837,7 @@ rbdimmer_channel_t* dimmer;
 void zero_cross_isr(void* user_data) {
     system_stats_t* s = (system_stats_t*)user_data;
     s->zero_cross_count++;
-    
+
     // Check frequency every 100 crossings (avoid frequent updates)
     if (s->zero_cross_count % 100 == 0) {
         s->frequency = rbdimmer_get_frequency(0);
@@ -811,20 +847,20 @@ void zero_cross_isr(void* user_data) {
 
 void setup() {
     Serial.begin(115200);
-    
+
     rbdimmer_init();
     rbdimmer_register_zero_cross(2, 0, 0);
-    
+
     // Set up callback for monitoring
     rbdimmer_set_callback(0, zero_cross_isr, &stats);
-    
+
     rbdimmer_config_t config = {
         .gpio_pin = 4,
         .phase = 0,
         .initial_level = 50,
         .curve_type = RBDIMMER_CURVE_RMS
     };
-    
+
     rbdimmer_create_channel(&config, &dimmer);
 }
 
@@ -837,10 +873,10 @@ void loop() {
         Serial.printf("Frequency stable: %s\n", stats.frequency_stable ? "Yes" : "No");
         Serial.printf("Current level: %d%%\n", rbdimmer_get_level(dimmer));
         Serial.println("---");
-        
+
         last_print = millis();
     }
-    
+
     delay(100);
 }
 ```
@@ -853,9 +889,9 @@ void loop() {
 - Flash memory usage: ~32KB
 
 ### Timing Precision
-- Zero-crossing detection: ±10 microseconds
-- TRIAC triggering: ±1 microsecond
-- Frequency measurement: ±0.1 Hz
+- Zero-crossing detection: +/-10 microseconds (after noise gate filtering)
+- TRIAC triggering: +/-1 microsecond
+- Frequency measurement: +/-0.1 Hz
 
 ### CPU Overhead
 - Interrupt handling: <50 microseconds per zero-crossing
@@ -866,8 +902,10 @@ void loop() {
 - Maximum 8 channels per ESP32
 - Maximum 4 independent phases
 - Minimum pulse width: 50 microseconds
+- Minimum firing delay: 100 microseconds (RBDIMMER_MIN_DELAY_US)
+- Effective dimming range: 3%-99% (RBDIMMER_LEVEL_MIN to RBDIMMER_LEVEL_MAX)
 - Maximum transition time: Limited by available memory for tasks
 
 ---
 
-*This API reference covers all public functions and data types in rbdimmerESP32 v1.0.0*
+*This API reference covers all public functions and data types in rbdimmerESP32 v2.0.0*
