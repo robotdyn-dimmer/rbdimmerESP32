@@ -1,387 +1,490 @@
-# Hardware Setup and Safety Guide
 
-## ⚠️ CRITICAL SAFETY WARNING
+# Hardware Connection
 
-**AC mains voltage is LETHAL**. This library is designed for use with **pre-built, isolated dimmer modules only**. Never work with AC mains voltage directly without proper training, isolation, and safety equipment.
+:::info
+Updated for rbdimmerESP32 v2.0.0. Minimum ESP-IDF: 5.3.
+:::
 
-**Required Safety Measures:**
-- ✅ Use only certified, isolated dimmer modules
-- ✅ Work with qualified electrical personnel
-- ✅ Use proper safety equipment (insulated tools, safety glasses)
-- ✅ Test with low voltage first
-- ✅ Install appropriate fuses and circuit breakers
-- ✅ Ensure proper grounding
-- ❌ Never work on live circuits
-- ❌ Never bypass safety isolations
-- ❌ Never use homemade AC switching circuits
+After choosing the right dimmer, you're ready to begin assembly and wiring.
 
-## Table of Contents
+A typical dimmer module includes two parts:
 
-1. [System Overview](#system-overview)
-2. [Hardware Requirements](#hardware-requirements)
-3. [Dimmer Module Selection](#dimmer-module-selection)
-4. [Wiring and Connections](#wiring-and-connections)
-5. [Load Compatibility](#load-compatibility)
-6. [Safety Procedures](#safety-procedures)
-7. [Testing and Validation](#testing-and-validation)
-8. [Troubleshooting](#troubleshooting)
-9. [Advanced Configurations](#advanced-configurations)
+- **Zero-cross detection module** -- Detects the moment the AC waveform crosses zero
+- **TRIAC module** -- Controls load power during each AC half-cycle
+
+:::info
+For more details on how TRIACs work, see the [TRIAC Operation Guide](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5).
+:::
+
+---
 
 ## System Overview
 
 ### Block Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        COMPLETE SYSTEM                          │
-├─────────────────┬───────────────────────┬─────────────────────┤
-│   ESP32         │    Dimmer Module      │      AC Load        │
-│   Controller    │    (Isolated)         │                     │
-│                 │                       │                     │
-│  ┌───────────┐  │  ┌─────────────────┐  │  ┌───────────────┐  │
-│  │    CPU    │  │  │  Zero-Cross     │  │  │               │  │
-│  │           │  │  │  Detection      │  │  │   Light Bulb  │  │
-│  │  Pin 2 ◄──┼──┼──┤    Circuit      │  │  │      or       │  │
-│  │  Pin 4 ────┼──┼──►  TRIAC Driver  ├──┼──┤   Motor       │  │
-│  │  GND   ────┼──┼──┤    Circuit      │  │  │      or       │  │
-│  │  3.3V  ────┼──┼──┤                 │  │  │   Heater      │  │
-│  └───────────┘  │  │  OPTICAL        │  │  │               │  │
-│                 │  │  ISOLATION      │  │  └───────────────┘  │
-│   LOW VOLTAGE   │  │                 │  │    HIGH VOLTAGE     │
-│   (3.3V DC)     │  │  ◄── BARRIER ──►│  │    (110/220V AC)    │
-└─────────────────┴───────────────────────┴─────────────────────┘
++------------------------------------------------------------------+
+|                        COMPLETE SYSTEM                            |
++------------------+------------------------+----------------------+
+|   ESP32          |    Dimmer Module       |      AC Load         |
+|   Controller     |    (Isolated)          |                      |
+|                  |                        |                      |
+|  +-----------+   |  +-----------------+   |  +---------------+   |
+|  |    CPU    |   |  |  Zero-Cross     |   |  |               |   |
+|  |           |   |  |  Detection      |   |  |   Light Bulb  |   |
+|  |  ZC Pin <-----+--+    Circuit      |   |  |      or       |   |
+|  | DIM Pin ------+-->  TRIAC Driver   +---+--+   Motor       |   |
+|  |  GND   -------+--+    Circuit      |   |  |      or       |   |
+|  |  3.3V  -------+--+                 |   |  |   Heater      |   |
+|  +-----------+   |  |  OPTICAL        |   |  |               |   |
+|                  |  |  ISOLATION      |   |  +---------------+   |
+|   LOW VOLTAGE    |  |                 |   |    HIGH VOLTAGE      |
+|   (3.3V DC)      |  | <-- BARRIER --> |   |    (110/220V AC)     |
++------------------+------------------------+----------------------+
 ```
 
 ### System Components
 
 1. **ESP32 Microcontroller**: Provides timing control and user interface
-2. **Isolated Dimmer Module**: Contains zero-crossing detection and TRIAC switching
+2. **Isolated Dimmer Module**: Contains zero-crossing detection and TRIAC switching with optical isolation (the critical safety barrier between low and high voltage)
 3. **AC Load**: The device being controlled (lights, motors, heaters)
-4. **Optical Isolation**: Critical safety barrier between low and high voltage
 
-## Hardware Requirements
+### v2.0.0 Timing Architecture
 
-### ESP32 Development Boards
+- **ZC noise gate**: `ZC_DEBOUNCE_US` eliminates false re-triggers caused by TRIAC commutation spikes on the zero-cross line. The ISR ignores any ZC edge that arrives within the debounce window after the previous valid edge.
+- **Two-pass ISR for multi-channel sync**: The first pass latches the zero-cross timestamp for all channels simultaneously; the second pass programs individual TRIAC fire timers. This keeps channels phase-locked even under heavy CPU load.
 
-#### Recommended Boards
-
-| Board | Pros | Cons | Best For |
-|-------|------|------|----------|
-| **ESP32 DevKit V1** | Widely available, good documentation | Basic features only | General projects |
-| **ESP32-WROOM-32** | Stable, well-tested | Older design | Production systems |
-| **ESP32-S3-DevKitC** | USB native, more memory | Higher cost | Advanced projects |
-| **ESP32-C3-DevKitM** | RISC-V, lower power | Limited GPIO | Battery projects |
-| **Wemos D1 Mini ESP32** | Compact, breadboard friendly | Limited GPIO access | Space-constrained |
-
-#### GPIO Requirements
-
-**Minimum Required:**
-- 1 × Digital Input (Zero-crossing detection)
-- 1 × Digital Output (TRIAC gate control)
-- Power and ground connections
-
-**Recommended for Multi-Channel:**
-- 4 × Digital Inputs (Multi-phase zero-crossing)
-- 8 × Digital Outputs (Multiple TRIAC channels)
-
-#### GPIO Pin Recommendations
-
-**Best Pins for Zero-Cross Detection:**
-- GPIO 2, 4, 5, 12, 13, 14, 15, 25, 26, 27
-- Avoid: GPIO 0, 1, 3 (boot/serial pins)
-- Avoid: GPIO 6-11 (connected to flash memory)
-
-**Best Pins for TRIAC Control:**
-- Any available GPIO except boot and flash pins
-- Prefer pins with lower numbers for better performance
-
-### Power Supply Considerations
-
-#### ESP32 Power Requirements
-- **Voltage**: 3.3V (regulated)
-- **Current**: 240mA typical, 500mA peak
-- **Power**: ~1.2W continuous
-
-#### Dimmer Module Power
-- **Most modules**: Self-powered from AC mains
-- **Some modules**: Require 3.3V or 5V auxiliary power
-- **Current**: Usually < 50mA for control circuits
+---
 
 ## Dimmer Module Selection
 
 ### Essential Features Checklist
 
-#### ✅ **MUST HAVE** Features
-- [ ] **Optical Isolation**: Between AC and DC sides (≥2.5kV)
-- [ ] **Zero-Cross Detection**: Built-in ZC detection circuit
-- [ ] **3.3V Logic**: Compatible with ESP32 logic levels
-- [ ] **CE/UL Certification**: Safety certified for your region
-- [ ] **Proper Heat Sinking**: Adequate TRIAC cooling
-- [ ] **Screw Terminals**: Secure AC connections
+**MUST HAVE features:**
 
-#### ⚠️ **AVOID** These Features
-- [ ] Non-isolated designs
-- [ ] Modules requiring 5V logic
-- [ ] Uncertified/homemade modules
-- [ ] Modules without zero-cross detection
-- [ ] Inadequate current ratings
+- Optical isolation between AC and DC sides (>=2.5 kV)
+- Built-in zero-cross detection circuit
+- 3.3V logic compatibility (ESP32 logic levels)
+- CE/UL certification for your region
+- Proper heat sinking / adequate TRIAC cooling
+- Screw terminals for secure AC connections
 
-### Recommended Modules
+**AVOID these features:**
 
-#### Professional Grade
-```
-Model: RobotDyn AC Light Dimmer
-- Voltage: 110-220V AC
-- Current: 1-4A versions available
-- Isolation: 2.5kV optical
-- Logic: 3.3V compatible
-- ZC Detection: Built-in
-- Certification: CE certified
-```
-
-#### Alternative Options
-```
-Generic Isolated TRIAC Modules:
-- Look for: MOC3021/MOC3041 optoisolators
-- TRIAC: BT136/BT138 series
-- Heat sink: Adequate for current rating
-- Terminals: Screw-down AC connections
-```
+- Non-isolated designs
+- Modules requiring 5V logic (not ESP32-safe without level shifter)
+- Uncertified or homemade modules
+- Modules without zero-cross detection
+- Inadequate current ratings for your load
 
 ### Current Rating Selection
 
-**Load Current Calculation:**
-```
-Current (A) = Power (W) ÷ Voltage (V)
+**Load current calculation:**
+
+```text
+Current (A) = Power (W) / Voltage (V)
 
 Examples:
-- 100W bulb @ 110V = 0.91A
-- 100W bulb @ 220V = 0.45A
-- 500W heater @ 110V = 4.55A
+  100W bulb @ 110V = 0.91A
+  100W bulb @ 220V = 0.45A
+  500W heater @ 110V = 4.55A
 ```
 
-**Module Rating Guidelines:**
-- Choose module rated for **2× the load current**
-- Example: 100W load → 2A minimum module rating
-- Always include safety margin for inrush current
+:::warning
+**2x guideline:** Choose a dimmer module rated for at least **2x the calculated load current**. This provides margin for inrush current (cold-filament incandescent bulbs draw 10-15x steady-state current at switch-on) and sustained thermal headroom.
 
-## Wiring and Connections
+Example: 100W load at 220V = 0.45A --> use a module rated >= 1A (a 2A or 4A module is preferred).
+:::
 
-### Basic Single-Channel Setup
+---
 
+## Wiring Diagram
+
+The connection diagram is the same for all dimmer modules. For multi-channel dimmers (2-4 channels), or those with thermal control and fan output, refer to detailed schematics showing additional power connections and pinouts.
+
+### Available Connection Diagrams
+
+- Dimmer 4A connection
+<img src="https://www.rbdimmer.com/web/image/4968-5c605a2e/dimpinout4A.png" alt="Wiring diagram for 4A dimmer" style="max-width:100%;height:auto;">
+- Dimmer 8A connection
+<img src="https://www.rbdimmer.com/web/image/2066-5a067a48/dimpinout8A.png" alt="Wiring diagram for 8A dimmer" style="max-width:100%;height:auto;">
+- Dimmer 16/24A connection
+<img src="https://www.rbdimmer.com/web/image/2212-e519e4d3/dimpinout16-24A.png" alt="Wiring diagram for 16/24A dimmer" style="max-width:100%;height:auto;">
+- Dimmer Module 16/24A with Temperature-Controlled Active Cooling
+<img src="https://www.rbdimmer.com/web/image/2334-cd0320ab/Dimmer16-24A-CS-pinout.png" alt="Wiring diagram for dimmer 16/24A with Temperature-Controlled Active Cooling" style="max-width:100%;height:auto;">
+- Dimmer Module 16/24A with Current sensor, temperature control
+<img src="https://www.rbdimmer.com/web/image/2401-46148b5d/Dimmer16-24A-CS-pinout.png" alt="Wiring diagram for dimmer 16/24A with Current sensor, Temperature-Controlled Active Cooling" style="max-width:100%;height:auto;">
+- Dimmer 40A connection
+<img src="https://www.rbdimmer.com/web/image/2136-95d9368a/dimpinout40A.png" alt="Wiring diagram for 40A dimmer" style="max-width:100%;height:auto;">
+- AC Dimmer module 40A with Current sensor
+<img src="https://www.rbdimmer.com/web/image/2106-acda7f4f/dimpinout40A-CS.png" alt="Wiring diagram for 40A dimmer with Current sensor and Temperature-Controlled Active Cooling" style="max-width:100%;height:auto;">
+- Dimmer 8A 2 channels connection
+<img src="https://www.rbdimmer.com/web/image/2185-034f4b3f/dimpinout8A2L.png" alt="Wiring diagram for 8A 2 channels dimmer" style="max-width:100%;height:auto;">
+- Dimmer 10A 4 channels connection
+<img src="https://www.rbdimmer.com/web/image/2120-dca73414/dimpinout10A4L.png" alt="Wiring diagram for 10A 4 channels dimmer" style="max-width:100%;height:auto;">
+
+---
+
+## Connecting to AC Power and Load
+
+### Power Wiring
+
+The dimmer is connected in series with the load. The **live AC L-IN** wire from the AC source connects to the dimmer input. The dimmer output **AC L-OUT** connects to the load. The **neutral wire AC-N** connects directly to both the zero-cross detector and the load.
+
+### Power Wires and Wire Gauge Selection
+
+The phase wire **AC L-IN**, which carries power through the dimmer to the load **AC L-OUT**, must be sized for the maximum RMS current.
+
+### Wire Gauge Calculation
+
+Use these formulas to determine the minimum cross-section:
+
+- **Copper wire:** `S (mm2) = I (A) / 8`
+- **Aluminum wire:** `S (mm2) = I (A) / 5`
+
+These formulas are based on safe current density and heat dissipation (Joule-Lenz law):
+
+```text
+P = I^2 x R, where R = rho x L / S
 ```
-ESP32 Side (Low Voltage):
-┌─────────────┐
-│    ESP32    │
-│      Pin 2  ├─── Zero-Cross Input
-│      Pin 4  ├─── Gate Control Output  
-│      GND    ├─── Ground
-│      3.3V   ├─── Power (if needed)
-└─────────────┘
 
-Dimmer Module (Isolated):
-┌─────────────────────┐
-│   Dimmer Module     │
-│                     │
-│  ZC Out ────────────┤ (to ESP32 Pin 2)
-│  Gate In ───────────┤ (to ESP32 Pin 4)
-│  GND ───────────────┤ (to ESP32 GND)
-│  VCC ───────────────┤ (to ESP32 3.3V, if needed)
-│                     │
-│ ╔══════════════════╗│ ← OPTICAL ISOLATION BARRIER
-│ ║   AC In    L     ║├─── Live (Hot) from mains
-│ ║   AC In    N     ║├─── Neutral  
-│ ║   AC Out   L     ║├─── Live (Hot) to load
-│ ╚══════════════════╝│
-└─────────────────────┘
+**Where:**
+
+- `P` = heat (W)
+- `I` = current (A)
+- `R` = resistance (Ohm)
+- `rho` = material resistivity (Ohm*mm2/m)
+- `L` = wire length (m)
+- `S` = wire cross-section (mm2)
+
+### Wire Gauge Table
+
+If you're unfamiliar with these formulas, refer to the table below:
+
+| Dimmer Rating | Copper Wire Min. Cross-Section | Aluminum Wire Min. Cross-Section |
+|---------------|--------------------------------|----------------------------------|
+| 4A | 0.5 mm2 | 0.8 mm2 |
+| 8A | 1.0 mm2 | 1.6 mm2 |
+| 10A | 1.5 mm2 | 2.0 mm2 |
+| 16A | 2.5 mm2 | 4.0 mm2 |
+| 24A | 3.0 mm2 | 5.0 mm2 |
+| 40A | 5.0 mm2 | 8.0 mm2 |
+
+:::note
+This applies to single-core wires. For stranded wires, multiply the area by 1.2.
+:::
+
+### Recommended Wire Type
+
+**Copper wire** is strongly recommended for most dimmer-based projects due to:
+
+- Better conductivity (rho = 0.0175 Ohm*mm2/m)
+- Flexibility and long lifespan
+- Oxidation resistance
+
+**Aluminum wire** may be used in some cases but:
+
+- Has higher resistivity (rho = 0.028 Ohm*mm2/m)
+- Requires special connectors
+- Not suitable for flexible connections
+
+:::tip
+If your home uses copper wires, continue using copper in your project.
+:::
+
+### Neutral Wire (AC-N) for Zero-Cross
+
+The neutral wire connected to the zero-cross detector carries very little current (typically 5-10 mA). It does not power the load, so it can be much thinner.
+
+**Recommended size:** 0.25-0.5 mm2 or AWG22, standard for signal wires.
+
+---
+
+## Circuit Protection
+
+### Choosing a Fuse
+
+Every high-voltage circuit must include a fuse:
+
+- Prevents damage from shorts or wiring errors
+- Protects against water/dust-related faults
+- Prevents overload damage to the dimmer
+
+### Fuse Rating Calculation
+
+Use the following formula:
+
+```text
+I(fuse) = I(load) x 1.25
 ```
 
+Do not exceed the dimmer's rated current.
 
-Multiple Dimmer Modules:
-Each channel needs its own dimmer module
-OR use a multi-channel isolated module
-```
+:::tip
+**Example:** 1000W load at 220V = 4.5A
 
-### Wire Selection and Routing
+`4.5A x 1.25 = 5.6A` --> Choose a 6A fuse.
+:::
 
-#### Low Voltage Side (ESP32)
-- **Wire Type**: Standard jumper wires or 22-24 AWG stranded
-- **Length**: Keep connections short (< 30cm recommended)
+:::warning
+**2x current rating rule also applies here.** If your dimmer module is rated at 8A but your load only draws 4A, size the fuse for the load (5A), not for the module. The fuse protects the wiring and the load -- the dimmer's own rating is the upper ceiling.
+:::
+
+### Fuse vs Circuit Breaker
+
+| Fuses | Circuit Breakers |
+|-------|------------------|
+| Inexpensive | More expensive |
+| Fast-acting and reliable | Resettable |
+| Must be replaced after tripping | Convenient |
+
+:::tip
+**Recommendation:** Use fuses for DIY projects.
+
+If using breakers, choose a quality brand for fast response.
+:::
+
+### Fuse Placement
+
+Place the fuse **before the dimmer** on the **AC L-IN** wire.
+
+For added safety, a second fuse may be added after the dimmer **AC L-OUT** if your load is sensitive or prone to shorts.
+
+---
+
+## General Wiring Recommendations
+
+When connecting a load, always ensure that all electrical connections are securely insulated. Use terminal blocks or dedicated wire connectors. Never leave exposed wire ends, especially when working with high-voltage circuits.
+
+### Insulation and Grounding
+
+- Always place the dimmer and all electrical connections inside an **insulated enclosure** that prevents accidental contact
+- If your device has a metal enclosure, it must be connected to **protective earth (ground)**
+- Use insulation materials rated for at least **400V** to ensure proper safety margins
+
+### Low-Voltage Side Wiring (ESP32 to Dimmer)
+
+- **Wire type**: Standard jumper wires or 22-24 AWG stranded
+- **Length**: Keep connections short (< 30 cm recommended)
 - **Shielding**: Not required for short runs
 - **Separation**: Keep away from AC wiring
 
-#### High Voltage Side (AC)
-- **Wire Type**: Rated for voltage and current
-- **Gauge**: According to load current (12-14 AWG typical)
-- **Insulation**: Rated for AC voltage + safety margin
-- **Conduit**: Use appropriate electrical conduit
-- **Separation**: Maintain safe distances from low voltage
+### Jumper Wire Recommendations
 
-### Connection Procedures
+- Avoid routing jumper wires near or across AC lines
+- Do not touch jumper wires during operation, as your body can introduce electrical noise or distort signals
 
-#### Step 1: Low Voltage Connections First
-1. **Power Off**: Ensure ESP32 is not powered
-2. **Connect Ground**: ESP32 GND to module GND
-3. **Connect Signals**: ZC and Gate control pins
-4. **Connect Power**: 3.3V if required by module
-5. **Double Check**: Verify all connections
+---
 
-#### Step 2: AC Connections (POWER OFF!)
-⚠️ **CRITICAL**: AC mains power must be OFF during wiring
+## Safety Guidelines
 
-1. **Install Breaker**: Add appropriate circuit protection
-2. **Connect Neutral**: AC neutral to module and load
-3. **Connect Live**: AC live through module to load
-4. **Ground Safety**: Connect safety ground if required
-5. **Secure Connections**: All AC connections must be secure
-6. **Insulate**: Cover all AC connections properly
+### High-Voltage Warning
 
-#### Step 3: Testing Sequence
-1. **Visual Inspection**: Check all connections
-2. **Continuity Test**: Use multimeter (power off)
-3. **Insulation Test**: Verify isolation (if equipment available)
-4. **Low Voltage Test**: Power ESP32 only, test logic
-5. **AC Test**: Apply AC power with appropriate safety measures
+:::danger
+**WARNING!** Working with 110-220V AC mains voltage is potentially fatal.
+
+Always follow these essential safety rules:
+
+- **Never work on a device while it is connected to the power supply**
+- Always make sure the device is unplugged before beginning any work
+- Use tools with insulated handles
+- Do not touch bare wires or live contacts
+- Never operate or assemble the dimmer in humid or dusty environments
+- Never bypass safety isolations
+- Never use homemade AC switching circuits
+- Use only certified, isolated dimmer modules
+
+If your device must be used outdoors or in harsh conditions, use an enclosure rated at **IP67 or higher** to ensure protection from moisture and dust.
+:::
+
+### Safety Checklists
+
+#### Pre-Power Checklist
+
+- [ ] Power is OFF at breaker / mains unplugged
+- [ ] Circuits verified dead with non-contact voltage tester
+- [ ] All AC connections are secure (screw terminals tightened)
+- [ ] No exposed conductors anywhere
+- [ ] Dimmer module ratings match or exceed load requirements
+- [ ] All components inspected for physical damage
+- [ ] Fuse installed and correctly rated
+- [ ] ESP32 ground connected to dimmer module ground
+- [ ] Lock-out / tag-out procedures followed (if applicable)
+
+#### First Power-Up Checklist
+
+- [ ] Start with dimmer level set to minimum (or 0%)
+- [ ] Have shutdown procedure ready (know where the breaker / kill switch is)
+- [ ] Power ESP32 first (low voltage only) and confirm zero-cross detection before applying AC
+- [ ] Apply AC power and verify frequency stabilizes to 50 or 60 Hz
+- [ ] Slowly increase dimmer level; watch for smoke, sparks, unusual noise
+- [ ] Monitor dimmer module temperature by touch (power off first!) or IR thermometer
+- [ ] Verify load responds linearly to level changes
+
+#### Operational Safety
+
+- **Weekly**: Visual check for damage or overheating signs
+- **Monthly**: Check connection tightness (power off first)
+- **Annually**: Professional inspection for commercial installations
+- **Immediate shutdown required** if you notice: burning smell, visible sparks or arcing, unusual noises, excessive heat, or flickering/erratic operation
+
+---
+
+## Connecting to a Microcontroller
+
+### ESP32 GPIO Pin Recommendations
+
+#### Best Pins for Zero-Cross Detection (ZC)
+
+- **Recommended**: GPIO 2, 4, 5, 12, 13, 14, 15, 25, 26, 27, 32, 33, 34, 35, 36, 39
+- **Avoid**: GPIO 0, 1, 3 (boot strapping and serial TX/RX)
+- **Avoid**: GPIO 6-11 (connected to internal flash memory -- do not use)
+
+GPIO 34-39 are input-only, which is fine for ZC detection.
+
+#### Best Pins for TRIAC Control (DIM)
+
+- **Recommended**: GPIO 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33
+- **Avoid**: GPIO 0, 1, 3 (boot/serial), GPIO 6-11 (flash), GPIO 34-39 (input-only)
+
+:::tip
+For multi-channel setups, prefer pins with lower numbers for DIM outputs. Keep ZC and DIM pins on the same GPIO bank when possible to reduce ISR latency.
+:::
+
+### ESP32 Development Boards
+
+| Board | Pros | Cons | Best For |
+|-------|------|------|----------|
+| **ESP32 DevKit V1** | Widely available, good docs | Basic features only | General projects |
+| **ESP32-WROOM-32** | Stable, well-tested | Older design | Production systems |
+| **ESP32-S3-DevKitC** | USB native, more memory | Higher cost | Advanced projects |
+| **ESP32-C3-DevKitM** | RISC-V, lower power | Limited GPIO | Battery projects |
+| **Wemos D1 Mini ESP32** | Compact, breadboard friendly | Limited GPIO access | Space-constrained |
+
+### Connecting the Zero-Cross (Z-C) Output to an Interrupt Pin
+
+The zero-cross detection **Z-C** output must be connected to a microcontroller pin that supports external interrupts. This allows the microcontroller to detect the exact moment the AC signal crosses zero and respond immediately.
+
+- **Arduino (ATmega):** Use digital pins 2 or 3 (e.g., on Uno or Nano boards)
+- **ESP8266:** Most GPIO pins support interrupts -- nearly any can be used
+- **ESP32:** Any GPIO pin can be used for interrupts (see recommendations above)
+
+### Connecting the Dimmer Pins (DIM)
+
+The Dim control pin **DIM** can be connected to any available GPIO on the microcontroller.
+
+Refer to the table below for recommended GPIO pins for various microcontroller families.
+
+| Board | Pin Zero Cross (Z-C) | Pin Dim (DIM) |
+|-------|----------------------|---------------|
+| Leonardo | D7 (NOT CHANGEABLE) | D0-D6, D8-D13 |
+| Mega | D2 (NOT CHANGEABLE) | D0-D1, D3-D70 |
+| UNO / NANO | D2 (NOT CHANGEABLE) | D0-D1, D3-D20 |
+| ESP8266 | D1(GPIO5), D5(GPIO14), D7(GPIO13), D2(GPIO4), D6(GPIO12), D8(GPIO15) | D0(GPIO16), D2(GPIO4), D6(GPIO12), D8(GPIO15), D1(GPIO5), D5(GPIO14), D7(GPIO13) |
+| ESP32 | See GPIO recommendations above | See GPIO recommendations above |
+| Arduino M0 / Arduino Zero | D7 (NOT CHANGEABLE) | D0-D6, D8-D13 |
+| Arduino Due | D0-D53 | D0-D53 |
+| STM32, Blue Pill (STM32F1) | PA0-PA15, PB0-PB15, PC13-PC15 | PA0-PA15, PB0-PB15, PC13-PC15 |
+
+### VCC Power Requirements
+
+The logic power supply **VCC** for the dimmer must match the logic level of your microcontroller -- not the main power supply used in your project.
+
+:::warning
+**Important:** Do not connect **VCC** to 12V or any higher voltage, even if your system uses such voltages. This can damage both the dimmer and your microcontroller.
+:::
+
+| Microcontroller | Recommended VCC |
+|-----------------|-----------------|
+| ATmega (e.g., Uno, Nano, Mega) | 5V or 3.3V (depending on your project's logic level) |
+| ESP8266 | 3.3V |
+| ESP32 | 3.3V (or 1.8V in low-voltage designs) |
+| STM32 | 3.3V |
+
+#### ESP32 Power Budget
+
+- **Voltage**: 3.3V regulated
+- **Current**: 240 mA typical, 500 mA peak (Wi-Fi TX bursts)
+- **Power**: ~1.2W continuous
+
+:::note
+Most dimmer modules are self-powered from AC mains for their high-voltage side. The VCC/GND connections only power the optocoupler LED and logic-level output. Typical draw is < 50 mA on the 3.3V rail.
+:::
+
+---
+
+## Dimmer Versions with Cooling Fan
+
+For dimmers that include a fan, the fan is powered by **DC 5V**.
+
+:::note
+Fan power is independent of the AC load and the dimmer's high-voltage section.
+:::
+
+## Dimmer Versions with Temperature Control
+
+### Temperature Sensor Pin (TEMP)
+
+If your dimmer includes a built-in temperature sensor, connect its **TEMP** output to an analog input (ADC pin) on your microcontroller.
+
+### Fan Control Pin (FAN)
+
+The fan control input can be connected to any GPIO on your microcontroller.
+
+Temperature-monitored dimmers can track the temperature of their power stage and automatically prevent overheating or hardware failure.
+
+The official software library for this dimmer model includes:
+
+- Dynamic fan speed control based on real-time temperature
+- Critical temperature alerts
+
+---
 
 ## Load Compatibility
 
 ### Compatible Load Types
 
-#### Resistive Loads ✅
-```
-Examples: Incandescent bulbs, heaters, hot plates
-Characteristics:
-- Constant power factor
-- No inrush current issues  
-- Linear response to dimming
-- Best compatibility
+**Resistive loads** (incandescent bulbs, heaters, hot plates):
+- Constant power factor, no inrush current issues
+- Linear response to dimming -- best compatibility
+- Recommended curve: `RBDIMMER_CURVE_RMS`
 
-Recommended Settings:
-- Curve: RBDIMMER_CURVE_RMS
-- Works with all dimmer types
-```
+**LED loads** (dimmable LED bulbs):
+- Must be rated "dimmable" -- non-dimmable LEDs will not work correctly
+- May require logarithmic curve for perceptually smooth dimming
+- Recommended curve: `RBDIMMER_CURVE_LOGARITHMIC`
+- Test compatibility before deploying
 
-#### LED Loads ⚠️
-```  
-Examples: LED bulbs, LED strips
-Characteristics:
-- May have built-in drivers
-- Some types are not dimmable
-- May require specific curve
+:::warning
+Use "dimmable"-rated LED bulbs only. Non-dimmable LEDs with built-in switch-mode drivers will flicker or fail.
+:::
 
-Recommended Settings:
-- Curve: RBDIMMER_CURVE_LOGARITHMIC
-- Test compatibility first
-- Use "dimmable" rated LEDs only
-```
+**Motor loads** (fans, small motors):
+- Inductive loads with high starting current
+- May require soft-start (gradual ramp)
+- Recommended curve: `RBDIMMER_CURVE_LINEAR`
+- Use appropriate TRIAC rating for inrush
 
-#### Motor Loads ⚠️
-```
-Examples: Fans, small motors
-Characteristics:
-- Inductive loads
-- High starting current
-- May require soft-start
+### Incompatible Loads
 
-Recommended Settings:
-- Curve: RBDIMMER_CURVE_LINEAR  
-- Use appropriate TRIAC rating
-- Consider motor-rated dimmers
-```
+- **Electronic ballasts** (fluorescent lights) -- may cause interference or damage
+- **Switch-mode power supplies** (computer PSUs, most modern electronics) -- phase control causes problems
+- **Large unprotected motors and transformers** (except dimmer-rated types)
 
-### Incompatible Loads ❌
-
-#### Electronic Ballasts
-- Fluorescent lights with electronic ballasts
-- May cause interference or damage
-- Use relay switching instead
-
-#### Switch-Mode Power Supplies  
-- Computer power supplies
-- Most modern electronics
-- Phase control causes problems
-
-#### Reactive Loads
-- Large motors without proper protection
-- Transformers (except dimmer-rated)
-- Unfiltered inductive loads
-
-### Load Testing Procedure
-
-1. **Start Small**: Test with low-power resistive load first
-2. **Monitor Current**: Check actual vs expected current draw
-3. **Check Waveforms**: Use oscilloscope if available
-4. **Temperature Check**: Monitor dimmer module temperature
-5. **Long-term Test**: Run for extended periods
-6. **Document Results**: Record compatibility and settings
-
-## Safety Procedures
-
-### Pre-Installation Safety
-
-#### Electrical Safety Training
-- [ ] Understand AC electrical hazards
-- [ ] Know local electrical codes
-- [ ] Have emergency procedures ready
-- [ ] Use proper personal protective equipment
-
-#### Test Equipment
-- [ ] Digital multimeter
-- [ ] Non-contact voltage tester  
-- [ ] Circuit analyzer (if available)
-- [ ] Insulation tester (for professional installations)
-
-### Installation Safety Checklist
-
-#### Before Starting
-- [ ] Turn OFF power at breaker
-- [ ] Test circuits with voltage tester
-- [ ] Lock out/tag out procedures
-- [ ] Verify dimmer module ratings
-- [ ] Check all components for damage
-
-#### During Installation  
-- [ ] Work on de-energized circuits only
-- [ ] Use insulated tools
-- [ ] Make secure connections
-- [ ] Follow manufacturer wiring diagrams
-- [ ] Double-check all connections
-
-#### Before Energizing
-- [ ] Visual inspection of all connections
-- [ ] Verify no exposed conductors
-- [ ] Check load compatibility
-- [ ] Set initial dimmer level to minimum
-- [ ] Have shutdown procedure ready
-
-### Operating Safety
-
-#### Regular Inspections
-- **Weekly**: Visual check for damage or overheating
-- **Monthly**: Check connection tightness
-- **Annually**: Professional inspection for commercial use
-
-#### Warning Signs
-- **Immediate shutdown required**:
-  - Burning smell
-  - Visible sparks or arcing
-  - Unusual noises
-  - Excessive heat
-  - Flickering or erratic operation
+---
 
 ## Testing and Validation
 
-### Functional Testing
+### Test 1: Zero-Cross Detection
 
-#### Test 1: Zero-Cross Detection
 ```cpp
 // Test code for zero-cross detection
 void test_zero_cross() {
     rbdimmer_init();
     rbdimmer_register_zero_cross(2, 0, 0);
-    
+
     // Monitor frequency detection
-    for(int i = 0; i < 30; i++) {
+    for (int i = 0; i < 30; i++) {
         delay(1000);
         uint16_t freq = rbdimmer_get_frequency(0);
         Serial.printf("Detected frequency: %d Hz\n", freq);
@@ -389,54 +492,57 @@ void test_zero_cross() {
 }
 ```
 
-**Expected Results:**
+**Expected results:**
 - Frequency should stabilize to 50 or 60 Hz within 10-20 seconds
-- Should not fluctuate more than ±1 Hz
+- Should not fluctuate more than +/-1 Hz
+- If `rbdimmer_get_frequency()` returns 0, check ZC wiring
 
-#### Test 2: Gate Control
+### Test 2: Gate Control (no AC load)
+
 ```cpp
-// Test TRIAC gate control (without AC load)
 void test_gate_control() {
     rbdimmer_init();
     rbdimmer_register_zero_cross(2, 0, 50);
-    
+
     rbdimmer_config_t config = {4, 0, 0, RBDIMMER_CURVE_LINEAR};
     rbdimmer_channel_t* channel;
     rbdimmer_create_channel(&config, &channel);
-    
+
     // Test different levels
-    for(int level = 0; level <= 100; level += 10) {
+    for (int level = 0; level <= 100; level += 10) {
         rbdimmer_set_level(channel, level);
-        Serial.printf("Level: %d%%, Delay: %d us\n", 
+        Serial.printf("Level: %d%%, Delay: %d us\n",
                       level, rbdimmer_get_delay(channel));
         delay(2000);
     }
 }
 ```
 
-#### Test 3: Load Response (AC Connected)
-⚠️ **Safety First**: Ensure all safety procedures are followed
+### Test 3: Load Response (AC connected)
+
+:::danger
+Ensure all safety procedures are followed before applying AC power.
+:::
 
 ```cpp
-// Test with actual AC load
 void test_load_response() {
     rbdimmer_init();
     rbdimmer_register_zero_cross(2, 0, 0);
-    
+
     rbdimmer_config_t config = {4, 0, 10, RBDIMMER_CURVE_RMS};
     rbdimmer_channel_t* channel;
     rbdimmer_create_channel(&config, &channel);
-    
+
     Serial.println("Starting load test - 10% to 90%");
     delay(2000);
-    
+
     // Gradual increase to avoid inrush
-    for(int level = 10; level <= 90; level += 10) {
+    for (int level = 10; level <= 90; level += 10) {
         rbdimmer_set_level_transition(channel, level, 1000);
         delay(2000);
         Serial.printf("Level: %d%%\n", level);
     }
-    
+
     // Return to safe level
     rbdimmer_set_level_transition(channel, 10, 1000);
 }
@@ -444,37 +550,22 @@ void test_load_response() {
 
 ### Performance Validation
 
-#### Timing Accuracy Test
-- Use oscilloscope to measure timing accuracy
-- Zero-cross to gate trigger should be consistent
-- Verify timing matches calculated values
+- **Timing accuracy**: Use an oscilloscope to verify zero-cross to gate-trigger timing is consistent across half-cycles
+- **Temperature**: Monitor dimmer module temperature under sustained load; must remain within safe limits
+- **Interference**: Check for RF interference with other devices at various power levels
 
-#### Temperature Testing
-- Monitor dimmer module temperature under load
-- Ensure temperature remains within safe limits
-- Test with maximum expected load
-
-#### Interference Testing
-- Check for radio frequency interference
-- Verify no interference with other devices
-- Test different load types and power levels
+---
 
 ## Troubleshooting
 
-### Common Hardware Issues
+### No Zero-Cross Detection
 
-#### Problem: No Zero-Cross Detection
-**Symptoms:**
-- `rbdimmer_get_frequency()` returns 0
-- No dimming response
+**Symptoms:** `rbdimmer_get_frequency()` returns 0, no dimming response.
 
-**Diagnostics:**
 ```cpp
-// Check zero-cross signal
 void diagnose_zero_cross() {
     pinMode(2, INPUT);
-    
-    while(true) {
+    while (true) {
         int state = digitalRead(2);
         Serial.printf("ZC Pin State: %d\n", state);
         delay(100);
@@ -483,135 +574,37 @@ void diagnose_zero_cross() {
 ```
 
 **Solutions:**
-1. Check wiring connections
-2. Verify dimmer module power
-3. Test with multimeter (DC side only)
+1. Check wiring connections (ZC output to correct ESP32 GPIO)
+2. Verify dimmer module has AC power (neutral connected)
+3. Test ZC output with multimeter on DC side only
 4. Replace dimmer module if faulty
 
-#### Problem: TRIAC Not Switching
-**Symptoms:**
-- Load doesn't respond to level changes
-- Constant on or off state
+### TRIAC Not Switching
 
-**Diagnostics:**
-1. Check gate control pin with LED indicator
-2. Verify dimmer module specifications  
-3. Test with known working load
+**Symptoms:** Load does not respond to level changes, stuck on or off.
 
 **Solutions:**
-1. Verify gate control connections
-2. Check for adequate gate current
-3. Test different GPIO pin
-4. Replace dimmer module
+1. Verify DIM pin wiring and GPIO number in code
+2. Check gate control pin with an LED indicator
+3. Test with a different GPIO pin
+4. Confirm dimmer module is rated for your load current
 
-#### Problem: Erratic Dimming
-**Symptoms:**
-- Inconsistent brightness levels
-- Flickering or jumping
+### Erratic Dimming / Flickering
 
-**Possible Causes:**
-1. Power supply noise
-2. Electrical interference
-3. Load incompatibility
-4. Poor connections
+**Possible causes:** Power supply noise, electrical interference, load incompatibility, poor connections.
 
 **Solutions:**
-1. Add power supply filtering
+1. Add power supply filtering / decoupling capacitors
 2. Check all connection tightness
-3. Test with different load type
-4. Add ferrite cores on cables
-
-### Measurement and Analysis
-
-#### Oscilloscope Analysis
-If oscilloscope is available:
-
-1. **Zero-Cross Signal**: Should be clean digital pulses
-2. **Gate Control**: Should show precise timing relative to ZC
-3. **Load Voltage**: Should show expected phase-cut waveform
-4. **Load Current**: Should follow voltage waveform
-
-#### Multimeter Measurements
-Safe measurements (power off):
-
-1. **Continuity**: All connections should have good continuity  
-2. **Isolation**: >1MΩ between AC and DC sides
-3. **Resistance**: Load resistance should match expectations
-
-## Advanced Configurations
-
-### Multi-Phase Systems
-
-For three-phase AC systems:
-
-```cpp
-// Three-phase setup
-void setup_three_phase() {
-    rbdimmer_init();
-    
-    // Register three phases
-    rbdimmer_register_zero_cross(2, 0, 0);  // Phase A
-    rbdimmer_register_zero_cross(15, 1, 0); // Phase B  
-    rbdimmer_register_zero_cross(4, 2, 0);  // Phase C
-    
-    // Create channels on each phase
-    rbdimmer_config_t config_a = {5, 0, 0, RBDIMMER_CURVE_RMS};
-    rbdimmer_config_t config_b = {18, 1, 0, RBDIMMER_CURVE_RMS};
-    rbdimmer_config_t config_c = {19, 2, 0, RBDIMMER_CURVE_RMS};
-    
-    rbdimmer_channel_t* channel_a, *channel_b, *channel_c;
-    rbdimmer_create_channel(&config_a, &channel_a);
-    rbdimmer_create_channel(&config_b, &channel_b);
-    rbdimmer_create_channel(&config_c, &channel_c);
-}
-```
-
-### High-Power Applications
-
-For loads >1kW:
-
-1. **Use appropriate dimmer modules** (10A+ rating)
-2. **Implement thermal monitoring**
-3. **Add cooling systems** if needed
-4. **Use professional installation** practices
-
-### Remote Monitoring
-
-```cpp
-// Add current monitoring (if available)
-void monitor_system() {
-    // Read current sensor (if connected)
-    float current = read_current_sensor();
-    float power = current * 230.0; // Approximate
-    
-    Serial.printf("Load Current: %.2f A\n", current);
-    Serial.printf("Load Power: %.1f W\n", power);
-    Serial.printf("Dimmer Level: %d%%\n", rbdimmer_get_level(channel));
-    Serial.printf("Frequency: %d Hz\n", rbdimmer_get_frequency(0));
-}
-```
+3. Test with a known-good resistive load (incandescent bulb)
+4. Add ferrite cores on signal cables
+5. In v2.0.0: verify `ZC_DEBOUNCE_US` is set appropriately -- too low allows TRIAC spike re-triggers; too high may clip legitimate ZC edges
 
 ---
 
-## Support and Resources
+:::tip
+Your dimmer-based project is now wired up -- great job!
 
-### Technical Support
-- **Email**: dev@rbdimmer.com
-- **Forum**: [https://www.rbdimmer.com/forum](https://www.rbdimmer.com/forum)
-- **Documentation**: [https://www.rbdimmer.com/knowledge/article/45](https://www.rbdimmer.com/knowledge/article/45)
+Next, let's move on to writing your code and integrating the library or software components.
+:::
 
-### Hardware Sources
-- **Dimmer Modules**: [https://www.rbdimmer.com/dimmers-pricing](https://www.rbdimmer.com/dimmers-pricing)
-- **Project Examples**: [https://www.rbdimmer.com/blog/dimmers-projects-5](https://www.rbdimmer.com/blog/dimmers-projects-5)
-
-### Legal and Safety
-- Always follow local electrical codes
-- Use qualified electricians for permanent installations
-- Maintain proper documentation and certifications
-- Regular safety inspections are recommended
-
----
-
-**Remember: Safety is not optional. When in doubt, consult with qualified electrical professionals.**
-
-*Hardware guide for rbdimmerESP32 v1.0.0*
