@@ -1,17 +1,18 @@
 
 # ESP-IDF Guide & Examples
+> [!NOTE]
+> **Library GitHub:** [https://github.com/robotdyn-dimmer/rbdimmerESP32](https://github.com/robotdyn-dimmer/rbdimmerESP32)
+
 
 Dimmers universal library for ESP32. ESP-IDF framework C guide and examples.
 
-:::info
-This guide is updated for **rbdimmerESP32 v2.0.0** (March 2026). Public API is unchanged — existing code works without modification.
-:::
+> [!NOTE]
+> This guide is updated for **rbdimmerESP32 v2.0.0** (March 2026). Public API is unchanged — existing code works without modification.
 
 Before start, read library overview: [Universal library for ESP32](https://www.rbdimmer.com/docs/universal-library-for-esp32)
 
-:::info
-**Download library from GitHub:** [rbdimmerESP32](https://github.com/robotdyn-dimmer/rbdimmerESP32)
-:::
+> [!NOTE]
+> **Download library from GitHub:** [rbdimmerESP32](https://github.com/robotdyn-dimmer/rbdimmerESP32)
 
 ## Requirements and Compatibility
 
@@ -82,9 +83,8 @@ idf_component_register(
 )
 ```
 
-:::info
-In v2.0.0 the Kconfig file is named `Kconfig` (standard ESP-IDF convention). If you are upgrading from an earlier version that used `Kconfig.txt`, rename it to `Kconfig`.
-:::
+> [!NOTE]
+> In v2.0.0 the Kconfig file is named `Kconfig` (standard ESP-IDF convention). If you are upgrading from an earlier version that used `Kconfig.txt`, rename it to `Kconfig`.
 
 ## Kconfig Configuration
 
@@ -111,9 +111,8 @@ Instructions for connecting the dimmer to the microcontroller and AC load:
 - **VCC** to 3.3V (for ESP32, VCC = 3.3V)
 - **GND** to GND
 
-:::info
-For detailed hardware connection guides, please refer to: [Hardware Connection](https://www.rbdimmer.com/docs/hardware-connection)
-:::
+> [!NOTE]
+> For detailed hardware connection guides, please refer to: [Hardware Connection](https://www.rbdimmer.com/docs/hardware-connection)
 
 ## Basic Example (ESP-IDF / C)
 
@@ -202,9 +201,8 @@ void app_main(void)
 - Set the dimming level with `rbdimmer_set_level()`. The dimming level is set in the range of 0(OFF) ~ 100(ON)
 - Smooth dimming level transition with `rbdimmer_set_level_transition()`. Smooth transition from the current level to the set level over a period of time (in milliseconds, 1s=1000ms)
 
-:::info
-For a detailed explanation of how dimmers work, visit: [AC Dimmer Operating Principles](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5)
-:::
+> [!NOTE]
+> For a detailed explanation of how dimmers work, visit: [AC Dimmer Operating Principles](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5)
 
 ### Data Structures
 
@@ -269,9 +267,8 @@ The following are now configurable via `idf.py menuconfig`:
 // CONFIG_RBDIMMER_LEVEL_MAX       = 99     // Maximum level (%)
 ```
 
-:::warning
-We do not recommend changing `RBDIMMER_DEFAULT_PULSE_WIDTH_US`, as this relates to the hardware characteristics of the dimmer.
-:::
+> [!IMPORTANT]
+> We do not recommend changing `RBDIMMER_DEFAULT_PULSE_WIDTH_US`, as this relates to the hardware characteristics of the dimmer.
 
 ### Functions
 
@@ -399,9 +396,8 @@ rbdimmer_set_level(dimmer_channel, level);
 rbdimmer_set_level_transition(dimmer_channel, 0, 5000);
 ```
 
-:::tip
-The smooth transition function creates a transition by breaking it into multiple small steps using a FreeRTOS task. During the transition, the main code continues to execute.
-:::
+> [!TIP]
+> The smooth transition function creates a transition by breaking it into multiple small steps using a FreeRTOS task. During the transition, the main code continues to execute.
 
 ## Advanced Examples
 
