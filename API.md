@@ -1,4 +1,7 @@
 # rbdimmerESP32 API Reference
+> [!NOTE]
+> **Library GitHub:** [https://github.com/robotdyn-dimmer/rbdimmerESP32](https://github.com/robotdyn-dimmer/rbdimmerESP32)
+
 
 > Updated for v2.0.0 -- public API is unchanged, but internal architecture is fully modular.
 
