@@ -1,9 +1,11 @@
 
 # Hardware Connection
+> [!NOTE]
+> **Library GitHub:** [https://github.com/robotdyn-dimmer/rbdimmerESP32](https://github.com/robotdyn-dimmer/rbdimmerESP32)
 
-:::info
-Updated for rbdimmerESP32 v2.0.0. Minimum ESP-IDF: 5.3.
-:::
+
+> [!NOTE]
+> Updated for rbdimmerESP32 v2.0.0. Minimum ESP-IDF: 5.3.
 
 After choosing the right dimmer, you're ready to begin assembly and wiring.
 
@@ -12,9 +14,8 @@ A typical dimmer module includes two parts:
 - **Zero-cross detection module** -- Detects the moment the AC waveform crosses zero
 - **TRIAC module** -- Controls load power during each AC half-cycle
 
-:::info
-For more details on how TRIACs work, see the [TRIAC Operation Guide](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5).
-:::
+> [!NOTE]
+> For more details on how TRIACs work, see the [TRIAC Operation Guide](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5).
 
 ---
 
@@ -90,11 +91,10 @@ Examples:
   500W heater @ 110V = 4.55A
 ```
 
-:::warning
-**2x guideline:** Choose a dimmer module rated for at least **2x the calculated load current**. This provides margin for inrush current (cold-filament incandescent bulbs draw 10-15x steady-state current at switch-on) and sustained thermal headroom.
-
-Example: 100W load at 220V = 0.45A --> use a module rated >= 1A (a 2A or 4A module is preferred).
-:::
+> [!IMPORTANT]
+> **2x guideline:** Choose a dimmer module rated for at least **2x the calculated load current**. This provides margin for inrush current (cold-filament incandescent bulbs draw 10-15x steady-state current at switch-on) and sustained thermal headroom.
+>
+> Example: 100W load at 220V = 0.45A --> use a module rated >= 1A (a 2A or 4A module is preferred).
 
 ---
 
@@ -170,9 +170,8 @@ If you're unfamiliar with these formulas, refer to the table below:
 | 24A | 3.0 mm2 | 5.0 mm2 |
 | 40A | 5.0 mm2 | 8.0 mm2 |
 
-:::note
-This applies to single-core wires. For stranded wires, multiply the area by 1.2.
-:::
+> [!NOTE]
+> This applies to single-core wires. For stranded wires, multiply the area by 1.2.
 
 ### Recommended Wire Type
 
@@ -188,9 +187,8 @@ This applies to single-core wires. For stranded wires, multiply the area by 1.2.
 - Requires special connectors
 - Not suitable for flexible connections
 
-:::tip
-If your home uses copper wires, continue using copper in your project.
-:::
+> [!TIP]
+> If your home uses copper wires, continue using copper in your project.
 
 ### Neutral Wire (AC-N) for Zero-Cross
 
@@ -220,15 +218,13 @@ I(fuse) = I(load) x 1.25
 
 Do not exceed the dimmer's rated current.
 
-:::tip
-**Example:** 1000W load at 220V = 4.5A
+> [!TIP]
+> **Example:** 1000W load at 220V = 4.5A
+>
+> `4.5A x 1.25 = 5.6A` --> Choose a 6A fuse.
 
-`4.5A x 1.25 = 5.6A` --> Choose a 6A fuse.
-:::
-
-:::warning
-**2x current rating rule also applies here.** If your dimmer module is rated at 8A but your load only draws 4A, size the fuse for the load (5A), not for the module. The fuse protects the wiring and the load -- the dimmer's own rating is the upper ceiling.
-:::
+> [!IMPORTANT]
+> **2x current rating rule also applies here.** If your dimmer module is rated at 8A but your load only draws 4A, size the fuse for the load (5A), not for the module. The fuse protects the wiring and the load -- the dimmer's own rating is the upper ceiling.
 
 ### Fuse vs Circuit Breaker
 
@@ -238,11 +234,10 @@ Do not exceed the dimmer's rated current.
 | Fast-acting and reliable | Resettable |
 | Must be replaced after tripping | Convenient |
 
-:::tip
-**Recommendation:** Use fuses for DIY projects.
-
-If using breakers, choose a quality brand for fast response.
-:::
+> [!TIP]
+> **Recommendation:** Use fuses for DIY projects.
+>
+> If using breakers, choose a quality brand for fast response.
 
 ### Fuse Placement
 
@@ -280,22 +275,21 @@ When connecting a load, always ensure that all electrical connections are secure
 
 ### High-Voltage Warning
 
-:::danger
-**WARNING!** Working with 110-220V AC mains voltage is potentially fatal.
-
-Always follow these essential safety rules:
-
-- **Never work on a device while it is connected to the power supply**
-- Always make sure the device is unplugged before beginning any work
-- Use tools with insulated handles
-- Do not touch bare wires or live contacts
-- Never operate or assemble the dimmer in humid or dusty environments
-- Never bypass safety isolations
-- Never use homemade AC switching circuits
-- Use only certified, isolated dimmer modules
-
-If your device must be used outdoors or in harsh conditions, use an enclosure rated at **IP67 or higher** to ensure protection from moisture and dust.
-:::
+> [!CAUTION]
+> **WARNING!** Working with 110-220V AC mains voltage is potentially fatal.
+>
+> Always follow these essential safety rules:
+>
+> - **Never work on a device while it is connected to the power supply**
+> - Always make sure the device is unplugged before beginning any work
+> - Use tools with insulated handles
+> - Do not touch bare wires or live contacts
+> - Never operate or assemble the dimmer in humid or dusty environments
+> - Never bypass safety isolations
+> - Never use homemade AC switching circuits
+> - Use only certified, isolated dimmer modules
+>
+> If your device must be used outdoors or in harsh conditions, use an enclosure rated at **IP67 or higher** to ensure protection from moisture and dust.
 
 ### Safety Checklists
 
@@ -347,9 +341,8 @@ GPIO 34-39 are input-only, which is fine for ZC detection.
 - **Recommended**: GPIO 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33
 - **Avoid**: GPIO 0, 1, 3 (boot/serial), GPIO 6-11 (flash), GPIO 34-39 (input-only)
 
-:::tip
-For multi-channel setups, prefer pins with lower numbers for DIM outputs. Keep ZC and DIM pins on the same GPIO bank when possible to reduce ISR latency.
-:::
+> [!TIP]
+> For multi-channel setups, prefer pins with lower numbers for DIM outputs. Keep ZC and DIM pins on the same GPIO bank when possible to reduce ISR latency.
 
 ### ESP32 Development Boards
 
@@ -390,9 +383,8 @@ Refer to the table below for recommended GPIO pins for various microcontroller f
 
 The logic power supply **VCC** for the dimmer must match the logic level of your microcontroller -- not the main power supply used in your project.
 
-:::warning
-**Important:** Do not connect **VCC** to 12V or any higher voltage, even if your system uses such voltages. This can damage both the dimmer and your microcontroller.
-:::
+> [!IMPORTANT]
+> **Important:** Do not connect **VCC** to 12V or any higher voltage, even if your system uses such voltages. This can damage both the dimmer and your microcontroller.
 
 | Microcontroller | Recommended VCC |
 |-----------------|-----------------|
@@ -407,9 +399,8 @@ The logic power supply **VCC** for the dimmer must match the logic level of your
 - **Current**: 240 mA typical, 500 mA peak (Wi-Fi TX bursts)
 - **Power**: ~1.2W continuous
 
-:::note
-Most dimmer modules are self-powered from AC mains for their high-voltage side. The VCC/GND connections only power the optocoupler LED and logic-level output. Typical draw is < 50 mA on the 3.3V rail.
-:::
+> [!NOTE]
+> Most dimmer modules are self-powered from AC mains for their high-voltage side. The VCC/GND connections only power the optocoupler LED and logic-level output. Typical draw is < 50 mA on the 3.3V rail.
 
 ---
 
@@ -417,9 +408,8 @@ Most dimmer modules are self-powered from AC mains for their high-voltage side. 
 
 For dimmers that include a fan, the fan is powered by **DC 5V**.
 
-:::note
-Fan power is independent of the AC load and the dimmer's high-voltage section.
-:::
+> [!NOTE]
+> Fan power is independent of the AC load and the dimmer's high-voltage section.
 
 ## Dimmer Versions with Temperature Control
 
@@ -455,9 +445,8 @@ The official software library for this dimmer model includes:
 - Recommended curve: `RBDIMMER_CURVE_LOGARITHMIC`
 - Test compatibility before deploying
 
-:::warning
-Use "dimmable"-rated LED bulbs only. Non-dimmable LEDs with built-in switch-mode drivers will flicker or fail.
-:::
+> [!IMPORTANT]
+> Use "dimmable"-rated LED bulbs only. Non-dimmable LEDs with built-in switch-mode drivers will flicker or fail.
 
 **Motor loads** (fans, small motors):
 - Inductive loads with high starting current
@@ -520,9 +509,8 @@ void test_gate_control() {
 
 ### Test 3: Load Response (AC connected)
 
-:::danger
-Ensure all safety procedures are followed before applying AC power.
-:::
+> [!CAUTION]
+> Ensure all safety procedures are followed before applying AC power.
 
 ```cpp
 void test_load_response() {
@@ -602,9 +590,8 @@ void diagnose_zero_cross() {
 
 ---
 
-:::tip
-Your dimmer-based project is now wired up -- great job!
-
-Next, let's move on to writing your code and integrating the library or software components.
-:::
+> [!TIP]
+> Your dimmer-based project is now wired up -- great job!
+>
+> Next, let's move on to writing your code and integrating the library or software components.
 
