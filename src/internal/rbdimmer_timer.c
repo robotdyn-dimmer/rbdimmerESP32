@@ -19,10 +19,18 @@
 #include "esp_attr.h"
 #include "esp_idf_version.h"
 
-// ESP_TIMER_ISR dispatch (used below) was introduced in ESP-IDF 5.0.
-// Arduino Core 3.x is based on ESP-IDF 5.x — earlier cores are not supported.
+// ESP_TIMER_ISR dispatch gives best jitter (~1 µs) but requires
+// CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD=y in sdkconfig.
+// Arduino Core 3.x does NOT enable this option, so we fall back to
+// ESP_TIMER_TASK dispatch (~10-50 µs jitter — acceptable for AC dimming).
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
   #error "rbdimmerESP32 requires ESP-IDF >= 5.0.0 (Arduino Core >= 3.0)"
+#endif
+
+#ifdef CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD
+  #define RBDIMMER_TIMER_DISPATCH  ESP_TIMER_ISR
+#else
+  #define RBDIMMER_TIMER_DISPATCH  ESP_TIMER_TASK
 #endif
 
 // ---------------------------------------------------------------------------
@@ -65,7 +73,7 @@ rbdimmer_err_t rbdimmer_timer_create(rbdimmer_channel_t* channel) {
     esp_timer_create_args_t delay_args = {
         .callback = &delay_timer_callback,
         .arg = channel,
-        .dispatch_method = ESP_TIMER_ISR,
+        .dispatch_method = RBDIMMER_TIMER_DISPATCH,
         .name = "dimmer_delay",
         .skip_unhandled_events = false
     };
@@ -77,7 +85,7 @@ rbdimmer_err_t rbdimmer_timer_create(rbdimmer_channel_t* channel) {
     esp_timer_create_args_t pulse_args = {
         .callback = &pulse_timer_callback,
         .arg = channel,
-        .dispatch_method = ESP_TIMER_ISR,
+        .dispatch_method = RBDIMMER_TIMER_DISPATCH,
         .name = "dimmer_pulse",
         .skip_unhandled_events = false
     };
