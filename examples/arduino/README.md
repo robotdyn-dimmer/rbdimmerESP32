@@ -1,15 +1,16 @@
 
 # Arduino Guide & Examples
+> [!NOTE]
+> **Library GitHub:** [https://github.com/robotdyn-dimmer/rbdimmerESP32](https://github.com/robotdyn-dimmer/rbdimmerESP32)
 
-:::info
-This guide is updated for **rbdimmerESP32 v2.0.0** (March 2026). Public API is unchanged -- existing code works without modification.
-:::
+
+> [!NOTE]
+> This guide is updated for **rbdimmerESP32 v2.0.0** (March 2026). Public API is unchanged -- existing code works without modification.
 
 Before start, read library overview: [Universal library for ESP32](https://www.rbdimmer.com/docs/universal-library-for-esp32)
 
-:::info
-**Download library from GitHub:** [https://github.com/robotdyn-dimmer/rbdimmerESP32](https://github.com/robotdyn-dimmer/rbdimmerESP32)
-:::
+> [!NOTE]
+> **Download library from GitHub:** [https://github.com/robotdyn-dimmer/rbdimmerESP32](https://github.com/robotdyn-dimmer/rbdimmerESP32)
 
 ## New in v2.0.0
 
@@ -47,9 +48,8 @@ Before start, read library overview: [Universal library for ESP32](https://www.r
 - Setting the dimming level with `rbdimmer_set_level()`. The dimming level is set in the range of 0(OFF) ~ 100(ON)
 - Smooth dimming level transition with `rbdimmer_set_level_transition()`. Smooth transition from the current level to the set level over a period of time (in milliseconds, 1s=1000ms)
 
-:::info
-How a dimmer works - article in our blog: [AC Dimmer Operating Principles](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5)
-:::
+> [!NOTE]
+> How a dimmer works - article in our blog: [AC Dimmer Operating Principles](https://www.rbdimmer.com/blog/diy-insights-1/ac-dimmer-based-on-zero-cross-detector-and-triac-operating-principles-and-applications-5)
 
 ### Data Structures
 
@@ -105,9 +105,8 @@ Constants in the `rbdimmerESP32.h` file. You can modify these parameters:
 #define RBDIMMER_MIN_DELAY_US 100             // Minimum delay (us) — raised from 50 in v2.0.0
 ```
 
-:::warning
-We do not recommend changing `RBDIMMER_DEFAULT_PULSE_WIDTH_US`, as this relates to the hardware characteristics of the dimmer.
-:::
+> [!IMPORTANT]
+> We do not recommend changing `RBDIMMER_DEFAULT_PULSE_WIDTH_US`, as this relates to the hardware characteristics of the dimmer.
 
 ### Functions
 
@@ -226,9 +225,8 @@ rbdimmer_set_level(dimmer_channel, level);
 rbdimmer_set_level_transition(dimmer_channel, 0, 5000);
 ```
 
-:::tip
-The function creates a smooth transition by breaking it into multiple small steps. The function uses a FreeRTOS task; during the transition, the main code continues to execute.
-:::
+> [!TIP]
+> The function creates a smooth transition by breaking it into multiple small steps. The function uses a FreeRTOS task; during the transition, the main code continues to execute.
 
 ## Solutions
 
@@ -236,9 +234,8 @@ The function creates a smooth transition by breaking it into multiple small step
 
 The library supports multiple independent dimming channels. The number of channels is limited in the library settings in the `rbdimmerESP32.h` file. Each dimming channel must have a separate output pin.
 
-:::info
-In v2.0.0, multi-channel setups benefit from the new **two-pass ISR** that sorts and fires all channels on the same phase within a single half-cycle, eliminating inter-channel timing jitter.
-:::
+> [!NOTE]
+> In v2.0.0, multi-channel setups benefit from the new **two-pass ISR** that sorts and fires all channels on the same phase within a single half-cycle, eliminating inter-channel timing jitter.
 
 Example of creating a two-channel system:
 
@@ -314,9 +311,8 @@ void setup() {
 }
 ```
 
-:::warning
-Do not use heavy code in the callback function. We recommend using FreeRTOS task calls.
-:::
+> [!IMPORTANT]
+> Do not use heavy code in the callback function. We recommend using FreeRTOS task calls.
 
 ### Multi-Phase Systems
 
@@ -675,16 +671,15 @@ void loop() {
 }
 ```
 
-:::success
-This implementation significantly improves the original example by:
-
-- Keeping the ISR (Interrupt Service Routine) extremely short - it only sends a message to a queue
-- Moving all processing logic to a dedicated FreeRTOS task
-- Using proper FreeRTOS mechanisms for safe communication between ISR and task
-- Preventing any timing issues in the zero-crossing detection by separating the interrupt handling from the processing
-
-This approach follows best practices for real-time systems where interrupt handlers should be as short as possible to avoid affecting system timing and responsiveness.
-:::
+> [!TIP]
+> This implementation significantly improves the original example by:
+>
+> - Keeping the ISR (Interrupt Service Routine) extremely short - it only sends a message to a queue
+> - Moving all processing logic to a dedicated FreeRTOS task
+> - Using proper FreeRTOS mechanisms for safe communication between ISR and task
+> - Preventing any timing issues in the zero-crossing detection by separating the interrupt handling from the processing
+>
+> This approach follows best practices for real-time systems where interrupt handlers should be as short as possible to avoid affecting system timing and responsiveness.
 
 ---
 
