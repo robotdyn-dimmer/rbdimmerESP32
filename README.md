@@ -3,7 +3,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform: ESP32](https://img.shields.io/badge/Platform-ESP32-blue.svg)](https://www.espressif.com/en/products/socs/esp32)
 [![Arduino IDE](https://img.shields.io/badge/Arduino%20IDE-Compatible-green.svg)](https://www.arduino.cc/)
-[![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-orange.svg)](https://platformio.org/)
 [![ESP-IDF](https://img.shields.io/badge/ESP--IDF-Compatible-red.svg)](https://github.com/espressif/esp-idf)
 
 > **v2.0.0 Breaking Changes**: Internal source layout changed to `src/internal/` modules. Examples restructured to per-sketch directories (Arduino IDE 2.x). `Kconfig.txt` renamed to `Kconfig`. Public API unchanged — no user code changes required.
@@ -31,7 +30,7 @@ A professional, high-performance AC dimmer control library for ESP32 microcontro
 - **Comprehensive Error Handling**: Detailed error codes and diagnostic information
 - **Thread-Safe Design**: Full FreeRTOS compatibility with proper resource management
 - **Extensive Documentation**: Complete Doxygen documentation with examples
-- **Cross-Platform Support**: Works with Arduino IDE, PlatformIO, and ESP-IDF
+- **Cross-Platform Support**: Works with Arduino IDE and ESP-IDF
 
 ## Modular Architecture
 
@@ -393,7 +392,6 @@ Automated CI ensures every commit builds cleanly across all supported platforms:
 
 ### Arduino Framework
 - **Arduino IDE 2.x**
-- **PlatformIO** with Arduino framework
 - Seamless integration with Arduino libraries
 
 ### ESP-IDF Framework
@@ -401,7 +399,7 @@ Automated CI ensures every commit builds cleanly across all supported platforms:
 - Professional development features
 
 ### Development Tools
-- **Visual Studio Code** with PlatformIO extension
+- **Visual Studio Code** with ESP-IDF extension
 - **CLion** with ESP-IDF plugin
 - **Eclipse CDT** with ESP-IDF tools
 - Command-line development support
@@ -474,7 +472,7 @@ We welcome contributions from the community! Please read our [Contributing Guide
 - **Website**: [https://rbdimmer.com](https://rbdimmer.com)
 - **Documentation**: [https://www.rbdimmer.com/docs/universal-library-for-esp32](https://www.rbdimmer.com/docs/universal-library-for-esp32)
 - **Hardware Catalog**: [https://www.rbdimmer.com/dimmers-pricing](https://www.rbdimmer.com/dimmers-pricing)
-- **Project Gallery**: [https://www.rbdimmer.com/blog/dimmers-projects-5](https://www.rbdimmer.com/blog/dimmers-projects-5)
+- **Project Gallery**: [https://www.rbdimmer.com/blog/integration-guides-8](https://www.rbdimmer.com/blog/integration-guides-8)
 
 ### Community Support
 - **Forum**: [https://forum.rbdimmer.com](https://forum.rbdimmer.com)
@@ -514,7 +512,6 @@ copies or substantial portions of the Software.
 - **Minimum ESP-IDF**: 5.3+
 - **Arduino ESP32 Core**: 3.x
 - **Arduino IDE**: 2.x
-- **PlatformIO**: 6.0+
 
 ## Documentation in Other Languages
 
@@ -529,7 +526,7 @@ Full documentation is available in 5 languages on the RBDimmer website:
 ## Related Projects
 
 - **Hardware Modules**: [RBDimmer Hardware Catalog](https://www.rbdimmer.com/dimmers-pricing)
-- **Application Examples**: [Project Gallery](https://www.rbdimmer.com/blog/dimmers-projects-5)
+- **Application Examples**: [Project Gallery](https://www.rbdimmer.com/blog/integration-guides-8)
 - **Technical Documentation**: [Knowledge Base](https://www.rbdimmer.com/docs/universal-library-for-esp32)
 
 ---
