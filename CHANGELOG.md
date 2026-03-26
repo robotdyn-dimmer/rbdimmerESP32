@@ -7,6 +7,26 @@ All notable changes to the rbdimmerESP32 library will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.0.1] - 2026-03-26
+
+### Added
+- **ESPHome External Component** (`esphome/components/rbdimmer/`) — native ESPHome integration:
+  - Hub platform (`rbdimmer:`) — library init + zero-cross registration with single-phase shorthand and multi-phase explicit forms
+  - Light platform (`platform: rbdimmer`) — TRIAC channel as ESPHome `LightOutput` with brightness slider, transitions, and per-channel curve selection
+  - Sensor platform (`platform: rbdimmer`) — AC mains frequency (Hz), brightness level (%), TRIAC firing delay (µs)
+  - Select platform (`platform: rbdimmer`) — runtime dimming curve switching (LINEAR / RMS / LOG) from Home Assistant
+  - Full documentation in English and Russian (`esphome/docs/en/`, `esphome/docs/ru/`)
+  - Lambda API reference with 10 copy-paste examples for advanced users
+  - Requires ESP-IDF framework; library pulled via `add_idf_component()`
+
+### Fixed
+- **Timer dispatch fallback for Arduino Core 3.x** (`rbdimmer_timer.c`) — Arduino Core 3.x does not enable `CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD`, causing `ESP_TIMER_ISR` to be undefined. Added compile-time auto-detection: when the Kconfig option is available, uses `ESP_TIMER_ISR` (~1 µs jitter); otherwise falls back to `ESP_TIMER_TASK` (~10–50 µs jitter, acceptable for AC dimming). Both `delay_timer` and `pulse_timer` now use the `RBDIMMER_TIMER_DISPATCH` macro instead of hardcoded `ESP_TIMER_ISR`.
+- **ESPHome `write_state` float-to-integer truncation** — `brightness * 100.0f` could truncate to 99 when brightness was exactly 1.0 due to IEEE 754 representation. Replaced `static_cast<uint8_t>(brightness * 100.0f)` with `roundf()` + overflow clamp.
+
+### Changed
+- `add_idf_component()` call no longer specifies `path=` parameter — the library is resolved from the repository root, matching the standard ESP-IDF component manager convention.
+- ESPHome example YAML includes `CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD: "y"` in `sdkconfig_options` — required for `ESP_TIMER_ISR` dispatch mode used by the library's TRIAC timers.
+
 ## [2.0.0] - 2026-03-23
 
 ### Overview

@@ -1,0 +1,188 @@
+# RBDimmer ESPHome Example Configuration
+# Complete working example for ESP32 with rbdimmerESP32 library
+
+esphome:
+  name: rbdimmer-example
+  friendly_name: "RBDimmer Example"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD: "y"
+
+# Enable logging
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "RBDimmer Fallback"
+    password: !secret ap_password
+
+# Optional: Web server for debugging
+web_server:
+  port: 80
+
+# --- RBDimmer Component ---
+
+external_components:
+  # For local development (YAML in esphome/, component in ../components/rbdimmer/):
+  - source:
+      type: local
+      path: ../components
+    components: [rbdimmer]
+  # For end users (from GitHub):
+  # - source: github://robotdyn-dimmer/rbdimmerESP32@main
+  #   components: [rbdimmer]
+  #   refresh: 1d
+
+# Hub: initialize library and zero-cross detector
+# Single-phase (shorthand):
+rbdimmer:
+  id: dimmer_hub
+  zero_cross_pin: GPIO23
+  frequency: 0  # auto-detect (recommended)
+
+# Multi-phase example (uncomment to use):
+# rbdimmer:
+#   id: dimmer_hub
+#   phases:
+#     - phase: 0
+#       zero_cross_pin: GPIO23
+#     - phase: 1
+#       zero_cross_pin: GPIO22
+
+# --- Light Entities ---
+# ZC detector → GPIO23
+# Channel 0   → GPIO25
+# Channel 1   → GPIO26
+# Channel 2   → GPIO27
+# Channel 3   → GPIO33
+
+light:
+  - platform: rbdimmer
+    name: "Dimmer Channel 0"
+    output_id: dimmer_ch0
+    rbdimmer_id: dimmer_hub
+    pin: GPIO25
+    phase: 0
+    curve: rms
+    gamma_correct: 1.0
+    default_transition_length: 1s
+
+  - platform: rbdimmer
+    name: "Dimmer Channel 1"
+    output_id: dimmer_ch1
+    rbdimmer_id: dimmer_hub
+    pin: GPIO26
+    phase: 0
+    curve: rms
+    gamma_correct: 1.0
+    default_transition_length: 1s
+
+  - platform: rbdimmer
+    name: "Dimmer Channel 2"
+    output_id: dimmer_ch2
+    rbdimmer_id: dimmer_hub
+    pin: GPIO27
+    phase: 0
+    curve: rms
+    gamma_correct: 1.0
+    default_transition_length: 1s
+
+  - platform: rbdimmer
+    name: "Dimmer Channel 3"
+    output_id: dimmer_ch3
+    rbdimmer_id: dimmer_hub
+    pin: GPIO33
+    phase: 0
+    curve: rms
+    gamma_correct: 1.0
+    default_transition_length: 1s
+
+# --- Sensor Entities ---
+
+sensor:
+  - platform: rbdimmer
+    rbdimmer_id: dimmer_hub
+    ac_frequency:
+      name: "AC Frequency"
+      phase: 0
+    level:
+      name: "Channel 0 Level"
+      light_id: dimmer_ch0
+    firing_delay:
+      name: "Channel 0 Firing Delay"
+      light_id: dimmer_ch0
+    update_interval: 60s
+
+  - platform: rbdimmer
+    rbdimmer_id: dimmer_hub
+    level:
+      name: "Channel 1 Level"
+      light_id: dimmer_ch1
+    firing_delay:
+      name: "Channel 1 Firing Delay"
+      light_id: dimmer_ch1
+    update_interval: 60s
+
+  - platform: rbdimmer
+    rbdimmer_id: dimmer_hub
+    level:
+      name: "Channel 2 Level"
+      light_id: dimmer_ch2
+    firing_delay:
+      name: "Channel 2 Firing Delay"
+      light_id: dimmer_ch2
+    update_interval: 60s
+
+  - platform: rbdimmer
+    rbdimmer_id: dimmer_hub
+    level:
+      name: "Channel 3 Level"
+      light_id: dimmer_ch3
+    firing_delay:
+      name: "Channel 3 Firing Delay"
+      light_id: dimmer_ch3
+    update_interval: 60s
+
+  # Wifi signal sensor (optional)
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+# --- Select Entities ---
+
+select:
+  - platform: rbdimmer
+    curve:
+      name: "Channel 0 Curve"
+      light_id: dimmer_ch0
+
+  - platform: rbdimmer
+    curve:
+      name: "Channel 1 Curve"
+      light_id: dimmer_ch1
+
+  - platform: rbdimmer
+    curve:
+      name: "Channel 2 Curve"
+      light_id: dimmer_ch2
+
+  - platform: rbdimmer
+    curve:
+      name: "Channel 3 Curve"
+      light_id: dimmer_ch3
