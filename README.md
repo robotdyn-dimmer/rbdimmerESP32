@@ -154,11 +154,42 @@ ESP32 3.3V   ←→  Dimmer Module VCC (if required)
 | [Troubleshooting](TROUBLESHOOTING.md) | Common problems and solutions |
 | [Examples](examples/README.md) | All example sketches explained |
 | [Changelog](CHANGELOG.md) | Version history |
+| [ESPHome Component](esphome/README.md) | ESPHome integration for Home Assistant |
 
 ### Platform-Specific Guides
 - **Arduino Guide**: [Arduino Framework Setup and Examples](https://www.rbdimmer.com/docs/dimmers-universal-library-for-esp32-arduino-guide-and-examples)
 - **ESP-IDF Guide**: [ESP-IDF Framework Setup and Examples](https://www.rbdimmer.com/docs/dimmers-universal-library-for-esp32-esp-idf-fraimwork-c-guide-and-examples)
 - **Complete Library Overview**: [Comprehensive Documentation](https://www.rbdimmer.com/docs/universal-library-for-esp32)
+
+### ESPHome Integration
+
+The library includes a native ESPHome external component for seamless Home Assistant integration. No C++ required — configure your dimmer entirely in YAML.
+
+```yaml
+external_components:
+  - source: github://robotdyn-dimmer/rbdimmerESP32@main
+    components: [rbdimmer]
+
+rbdimmer:
+  zero_cross_pin: GPIO23
+
+light:
+  - platform: rbdimmer
+    name: "Living Room"
+    pin: GPIO25
+    curve: rms
+```
+
+For advanced use cases, the full C API is also accessible via ESPHome [lambda functions](esphome/LAMBDA.md).
+
+**ESPHome Documentation:**
+
+- [ESPHome Component Overview](esphome/README.md) — features, quick start, integration methods
+- [Install & Wiring](esphome/INSTALL.md) — requirements, hardware setup, basic YAML
+- [Entities Reference](esphome/ENTITIES.md) — hub, light, sensor, select platforms
+- [YAML Examples](esphome/EXAMPLES.md) — copy-paste configurations
+- [Lambda Reference](esphome/LAMBDA.md) — direct C API access from lambdas
+- [Troubleshooting](esphome/TROUBLESHOOTING.md) — common issues and solutions
 
 ## Advanced Features
 
