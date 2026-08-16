@@ -110,9 +110,9 @@ Multi-channel systems multiply the importance of electrical safety. Always use p
 
 ## Resources
 
-- **Dimmers Website**: https://rbdimmer.com
+- **Dimmers Website**: https://rbdimmer.com/?utm_source=github&utm_medium=referral&utm_campaign=rbdimmeresp32
 - **Library Repository**: https://github.com/robotdyn-dimmer/rbdimmerESP32
-- **Dimmers Catalog**: https://www.rbdimmer.com/dimmers-pricing
+- **Dimmers Catalog**: https://www.rbdimmer.com/dimmers-pricing?utm_source=github&utm_medium=referral&utm_campaign=rbdimmeresp32
 - **Hardware Documentation**: https://www.rbdimmer.com/knowledge/article/45
 - **Library Documentation**: https://www.rbdimmer.com/knowledge/article/59
 - **Example Projects**: https://www.rbdimmer.com/blog/dimmers-projects-5

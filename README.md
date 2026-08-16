@@ -500,9 +500,9 @@ We welcome contributions from the community! Please read our [Contributing Guide
 ## Support & Community
 
 ### Official Resources
-- **Website**: [https://rbdimmer.com](https://rbdimmer.com)
+- **Website**: [https://rbdimmer.com](https://rbdimmer.com/?utm_source=github&utm_medium=referral&utm_campaign=rbdimmeresp32)
 - **Documentation**: [https://www.rbdimmer.com/docs/universal-library-for-esp32](https://www.rbdimmer.com/docs/universal-library-for-esp32)
-- **Hardware Catalog**: [https://www.rbdimmer.com/dimmers-pricing](https://www.rbdimmer.com/dimmers-pricing)
+- **Hardware Catalog**: [https://www.rbdimmer.com/dimmers-pricing](https://www.rbdimmer.com/dimmers-pricing?utm_source=github&utm_medium=referral&utm_campaign=rbdimmeresp32)
 - **Project Gallery**: [https://www.rbdimmer.com/blog/integration-guides-8](https://www.rbdimmer.com/blog/integration-guides-8)
 
 ### Community Support
@@ -556,7 +556,7 @@ Full documentation is available in 5 languages on the RBDimmer website:
 
 ## Related Projects
 
-- **Hardware Modules**: [RBDimmer Hardware Catalog](https://www.rbdimmer.com/dimmers-pricing)
+- **Hardware Modules**: [RBDimmer Hardware Catalog](https://www.rbdimmer.com/dimmers-pricing?utm_source=github&utm_medium=referral&utm_campaign=rbdimmeresp32)
 - **Application Examples**: [Project Gallery](https://www.rbdimmer.com/blog/integration-guides-8)
 - **Technical Documentation**: [Knowledge Base](https://www.rbdimmer.com/docs/universal-library-for-esp32)
 

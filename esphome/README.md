@@ -157,5 +157,5 @@ esphome:
 
 - **Library source**: https://github.com/robotdyn-dimmer/rbdimmerESP32
 - **Library version**: v2.0.0
-- **Hardware catalog**: https://www.rbdimmer.com/dimmers-pricing
+- **Hardware catalog**: https://www.rbdimmer.com/dimmers-pricing?utm_source=github&utm_medium=referral&utm_campaign=rbdimmeresp32
 - **Support forum**: https://www.rbdimmer.com/forum
